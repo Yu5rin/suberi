@@ -1,0 +1,2672 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>すべり石</title>
+<meta name="description" content="氷の上の石をはじいて、朱の石を的に入れるパズル">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Zen+Kaku+Gothic+New:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f3ede1; --paper2:#e9e0cf; --ink:#24211d; --ink2:#5c564c; --ink3:#9a9184;
+  --shu:#c8452f; --shu2:#e3826f; --ice:#dfe9ee; --ice2:#c4d6df; --line:#d6ccb9; --rock:#8d8578; --rock2:#a9a193;
+  --btn:#fbf8f1; --shadow:0 1px 0 rgba(0,0,0,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#1d1b18; --paper2:#27241f; --ink:#ece5d8; --ink2:#b8afa1; --ink3:#7d7568;
+    --shu:#e0644d; --shu2:#a8493a; --ice:#2a3338; --ice2:#37444b; --line:#3a352e; --rock:#57514a; --rock2:#6b645b; --btn:#2a2722;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#1d1b18; --paper2:#27241f; --ink:#ece5d8; --ink2:#b8afa1; --ink3:#7d7568;
+  --shu:#e0644d; --shu2:#a8493a; --ice:#2a3338; --ice2:#37444b; --line:#3a352e; --rock:#57514a; --rock2:#6b645b; --btn:#2a2722;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);
+  font-family:"Zen Kaku Gothic New",system-ui,sans-serif;overscroll-behavior:none}
+body{display:flex;justify-content:center}
+#app{width:100%;max-width:520px;height:100%;height:100dvh;position:relative;overflow:hidden;
+  padding:env(safe-area-inset-top) 16px env(safe-area-inset-bottom)}
+.screen{position:absolute;inset:0;padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px);
+  display:none;flex-direction:column}
+.screen.on{display:flex}
+button{font:inherit;color:var(--ink);background:var(--btn);border:1px solid var(--line);border-radius:10px;
+  padding:12px 16px;cursor:pointer;box-shadow:var(--shadow);touch-action:manipulation}
+button:active{transform:translateY(1px)}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible{outline:2px solid var(--shu);outline-offset:2px}
+.shu{color:var(--shu)}
+/* タイトル */
+#title{align-items:center;justify-content:center;gap:12px;text-align:center}
+#title .sub{font-size:15px;letter-spacing:.3em;color:var(--ink2)}
+#title h1{font-size:52px;margin:0 0 8px;letter-spacing:.12em;font-weight:700}
+#title .mark{width:120px;height:90px;margin-bottom:12px}
+#title .menu{display:flex;flex-direction:column;gap:10px;width:min(260px,100%);margin-top:20px}
+#title .menu button{font-size:17px;padding:14px}
+#title .stars{color:var(--ink2);font-size:14px;margin-top:10px}
+/* 共通ヘッダ */
+.head{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.head h2{margin:0;font-size:20px;flex:1}
+.head button{padding:8px 12px;font-size:14px}
+/* 面をえらぶ */
+.tabs{display:flex;gap:8px;margin-bottom:12px}
+.tabs button{flex:1;padding:10px}
+.tabs button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+#chapters{overflow:auto;flex:1;display:flex;flex-direction:column;gap:14px;padding-bottom:12px}
+.chap{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--paper2)}
+.chap h3{margin:0;font-size:17px;display:flex;align-items:baseline;gap:8px}
+.chap h3 small{margin-left:auto;font-weight:400;font-size:13px;color:var(--ink2)}
+.chap p{margin:6px 0 10px;font-size:13px;color:var(--ink2);line-height:1.5}
+.chap.lock{opacity:.55}
+.grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.grid button{padding:6px 0 4px;font-size:15px;display:flex;flex-direction:column;align-items:center;gap:1px;border-radius:8px}
+.grid button .st{font-size:10px;letter-spacing:1px;color:var(--shu);min-height:12px}
+/* ゲーム */
+#game .info{display:flex;align-items:baseline;gap:12px;margin-bottom:4px}
+#game .info .id{font-size:20px;font-weight:700}
+#game .info .cname{font-size:13px;color:var(--ink2);flex:1}
+#game .count{font-size:15px}
+#game .count b{font-size:24px}
+#msg{min-height:40px;font-size:13px;color:var(--ink2);line-height:1.45;display:flex;align-items:center}
+#msg.warn{color:var(--shu)}
+#stage{flex:1;position:relative;min-height:0}
+#board{position:absolute;inset:0;width:100%;height:100%;touch-action:none}
+#game .bar{display:flex;gap:8px;margin-top:10px}
+#game .bar button{flex:1;padding:12px 4px;font-size:15px}
+#game .bar button small{display:block;font-size:10px;color:var(--ink3)}
+/* あがり */
+#clear{position:absolute;inset:0;background:color-mix(in srgb,var(--paper) 78%,transparent);display:none;
+  align-items:center;justify-content:center;z-index:5;backdrop-filter:blur(2px)}
+#clear.on{display:flex}
+#clear .card{background:var(--btn);border:1px solid var(--line);border-radius:16px;padding:22px 20px;width:min(320px,90%);
+  text-align:center;box-shadow:0 8px 30px rgba(0,0,0,.15)}
+#clear h2{margin:0;font-size:30px;letter-spacing:.3em;color:var(--shu)}
+#clear .seal{display:flex;justify-content:center;gap:10px;margin:14px 0 6px}
+#clear .seal span{width:44px;height:44px;border:2.5px solid var(--shu);color:var(--shu);border-radius:6px;display:grid;place-items:center;font-size:22px;font-weight:700;transform:rotate(-6deg)}
+#clear .seal span.off{border-color:var(--line);color:var(--line);transform:none}
+#clear p{margin:6px 0;color:var(--ink2);font-size:14px}
+#clear .btns{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+/* 設定・遊び方 */
+.rows{display:flex;flex-direction:column;gap:14px;overflow:auto}
+.row{display:flex;align-items:center;gap:10px;justify-content:space-between;border-bottom:1px solid var(--line);padding-bottom:12px}
+.row .opts{display:flex;gap:6px}
+.row .opts button{padding:8px 12px;font-size:14px}
+.row .opts button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.howto{line-height:1.8;font-size:15px;overflow:auto}
+.howto li{margin-bottom:10px}
+.howto .k{font-size:13px;color:var(--ink2)}
+.toast{position:absolute;left:50%;bottom:110px;transform:translateX(-50%);background:var(--ink);color:var(--paper);
+  padding:10px 16px;border-radius:20px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;z-index:9}
+.toast.on{opacity:.92}
+</style>
+</head>
+<body>
+<div id="app">
+  <section class="screen on" id="title">
+    <svg class="mark" viewBox="20 26 68 56" aria-hidden="true">
+      <g fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M24,30 h60 v48 h-60 z M24,46 h60 M24,62 h60 M44,30 v48 M64,30 v48" opacity=".35"/>
+        <path d="M30,50 h10 M27,55 h14 M30,60 h10" opacity=".6"/>
+      </g>
+      <circle cx="56" cy="55" r="10" fill="currentColor"/>
+      <circle cx="56" cy="55" r="3.5" fill="var(--paper)"/>
+      <rect x="67" y="49" width="14" height="12" fill="none" stroke="var(--shu)" stroke-width="2.2"/>
+    </svg>
+    <div class="sub">氷の上の</div>
+    <h1>すべり石</h1>
+    <div class="menu">
+      <button id="tContinue">つづきから</button>
+      <button id="tSelect">面をえらぶ</button>
+      <button id="tHow">遊び方</button>
+      <button id="tConf">設定</button>
+    </div>
+    <div class="stars" id="tStars"></div>
+  </section>
+
+  <section class="screen" id="select">
+    <div class="head"><button id="sBack">もどる</button><h2>面をえらぶ</h2><span id="sStars" class="shu"></span></div>
+    <div class="tabs" id="tabs"></div>
+    <div id="chapters"></div>
+  </section>
+
+  <section class="screen" id="game">
+    <div class="head" style="margin-bottom:6px"><button id="gList">一覧</button>
+      <div class="info" style="flex:1;margin:0"><span class="id" id="gId"></span><span class="cname" id="gName"></span></div>
+      <span class="count"><b id="gMoves">0</b> 手 / 最短 <span id="gPar"></span></span>
+    </div>
+    <div id="msg"></div>
+    <div id="stage"><canvas id="board"></canvas></div>
+    <div class="bar">
+      <button id="gUndo">もどす<small>Z</small></button>
+      <button id="gReset">やりなおし<small>R</small></button>
+      <button id="gHint">ヒント<small id="gHintLeft">のこり 3</small></button>
+    </div>
+    <div id="clear"><div class="card">
+      <h2>あがり</h2>
+      <div class="seal" id="cSeal"></div>
+      <p id="cText"></p>
+      <div class="btns">
+        <button id="cNext">次の面へ</button>
+        <button id="cAgain">もう一度</button>
+        <button id="cList">一覧へ</button>
+      </div>
+    </div></div>
+  </section>
+
+  <section class="screen" id="conf">
+    <div class="head"><button id="fBack">もどる</button><h2>設定</h2></div>
+    <div class="rows">
+      <div class="row"><span>音</span><div class="opts" data-key="sound"><button data-v="1">鳴らす</button><button data-v="0">鳴らさない</button></div></div>
+      <div class="row"><span>ふるえ</span><div class="opts" data-key="buzz"><button data-v="1">ふるえる</button><button data-v="0">ふるえない</button></div></div>
+      <div class="row"><span>滑る速さ</span><div class="opts" data-key="fast"><button data-v="0">ふつう</button><button data-v="1">はやい</button></div></div>
+      <div class="row"><span>記録を消す</span><button id="fReset">記録を消す</button></div>
+    </div>
+  </section>
+
+  <section class="screen" id="how">
+    <div class="head"><button id="hBack">もどる</button><h2>遊び方</h2></div>
+    <ol class="howto">
+      <li>石を指ではじくと、その向きへ滑ります。</li>
+      <li>岩・壁・ほかの石に当たるまで止まりません。</li>
+      <li>朱の石を的(朱の枠)に入れるとあがりです。</li>
+      <li>墨の子石も動かせます。止まる場所を作りましょう。</li>
+      <li>最短の手数であがると印が三つ、＋二手までで二つ。</li>
+      <li>ヒントは一面に三回まで。使うと印は二つまで。</li>
+      <li>印を集めると次の章が開きます。</li>
+      <li class="k">キーボード：石をクリック（または Tab / 数字キー）で選び、矢印キーで滑らせます。Z でもどす、R でやりなおし、H でヒント。</li>
+    </ol>
+  </section>
+  <div class="toast" id="toast"></div>
+</div>
+<script id="engine">
+// すべり石 — 盤面ロジック（描画から独立。ブラウザとNodeの両方で使う）
+(function (root) {
+  'use strict';
+  const DIRS = { U: [0, -1], D: [0, 1], L: [-1, 0], R: [1, 0] };
+  const WIND = { '^': 'U', 'v': 'D', '<': 'L', '>': 'R' };
+
+  // levels.txt を解析
+  function parseLevels(text) {
+    const blocks = text.replace(/\r/g, '').trim().split(/\n\s*\n/);
+    return blocks.map((b) => {
+      const lines = b.split('\n');
+      const [id, par, sol] = lines[0].trim().split(/\s+/);
+      const rows = lines.slice(1);
+      const [ch, no] = id.split('-').map(Number);
+      const moves = [];
+      for (let i = 0; i + 1 < (sol || '').length; i += 2) moves.push([+sol[i], sol[i + 1]]);
+      return { id, ch, no, par: +par, sol: moves, rows, w: rows[0].length, h: rows.length };
+    });
+  }
+
+  // 初期状態：床(grid)と石(stones[0]=朱の石, 以降=子石)
+  function initState(lv) {
+    const grid = [];
+    const stones = [];
+    const kids = [];
+    let goal = null;
+    lv.rows.forEach((row, y) => {
+      grid.push(row.split('').map((c, x) => {
+        if (c === 'A') { stones[0] = { x, y, alive: true }; return '.'; }
+        if (c === 'b') { kids.push({ x, y, alive: true }); return '.'; }
+        if (c === 'G') { goal = { x, y }; return '.'; }
+        return c;
+      }));
+    });
+    return { grid, stones: [stones[0], ...kids], goal, gateOpen: false, w: lv.w, h: lv.h, won: false };
+  }
+
+  // 盤(grid)は書き換える時だけ複製する（探索の高速化）
+  function clone(s, deep = true) {
+    return {
+      grid: deep ? s.grid.map((r) => r.slice()) : s.grid, stones: s.stones.map((t) => ({ ...t })),
+      goal: s.goal, gateOpen: s.gateOpen, w: s.w, h: s.h, won: s.won,
+    };
+  }
+
+  function stoneAt(s, x, y, except) {
+    for (let i = 0; i < s.stones.length; i++) {
+      const t = s.stones[i];
+      if (i !== except && t.alive && t.x === x && t.y === y) return i;
+    }
+    return -1;
+  }
+
+  function blocked(s, x, y, self) {
+    if (x < 0 || y < 0 || x >= s.w || y >= s.h) return true;
+    const c = s.grid[y][x];
+    if (c === '#') return true;
+    if (c === '|' && !s.gateOpen) return true;
+    return stoneAt(s, x, y, self) >= 0;
+  }
+
+  // 一手を実行。戻り値 { state, path, events, result }
+  // result: 'none'(動かない) | 'move' | 'goal' | 'fall'(朱の石が落ちた)
+  // path: [{x,y,ev}] 石の通った升（アニメーション用）
+  function move(s0, idx, dir) {
+    const s = clone(s0, false);
+    let own = false;
+    const setCell = (x, y, c) => { if (!own) { s.grid = s.grid.map((r) => r.slice()); own = true; } s.grid[y][x] = c; };
+    const t = s.stones[idx];
+    if (!t || !t.alive) return { state: s0, path: [], result: 'none' };
+    let d = dir;
+    let x = t.x, y = t.y;
+    const path = [{ x, y }];
+    const cracked = [];
+    const seen = new Set();
+    let result = 'move';
+    let steps = 0;
+    for (;;) {
+      const [dx, dy] = DIRS[d];
+      const nx = x + dx, ny = y + dy;
+      if (blocked(s, nx, ny, idx)) break;
+      // 薄氷：離れた升が割れる
+      if (s.grid[y][x] === '~') { setCell(x, y, 'o'); cracked.push({ x, y }); }
+      x = nx; y = ny; steps++;
+      const c = s.grid[y][x];
+      const step = { x, y };
+      path.push(step);
+      if (c === 'o') { // 穴
+        step.ev = 'fall';
+        if (idx === 0) { result = 'fall'; t.x = x; t.y = y; t.alive = false; break; }
+        setCell(x, y, '.'); t.alive = false; t.x = x; t.y = y; step.ev = 'plop';
+        break;
+      }
+      if (idx === 0 && s.goal && x === s.goal.x && y === s.goal.y) break; // 的に入ったら止まる
+      if (c === '*') { step.ev = 'snow'; break; }
+      if (WIND[c]) {
+        step.ev = 'wind';
+        const key = x + ',' + y + ',' + d;
+        if (seen.has(key)) break; // 風の輪：念のため停止
+        seen.add(key);
+        d = WIND[c];
+      }
+    }
+    if (steps === 0) return { state: s0, path: [], result: 'none' };
+    if (result !== 'fall' && t.alive) {
+      t.x = x; t.y = y;
+      if (s.grid[y][x] === '_') { s.gateOpen = !s.gateOpen; path[path.length - 1].ev = 'gate'; }
+      if (idx === 0 && s.goal && x === s.goal.x && y === s.goal.y) { result = 'goal'; s.won = true; }
+    }
+    return { state: s, path, cracked, result };
+  }
+
+  function key(s) {
+    let k = s.gateOpen ? '1' : '0';
+    for (const t of s.stones) k += t.alive ? ',' + t.x + ':' + t.y : ',x';
+    k += '|';
+    // 氷・穴は位置ごと記録（埋まった穴は '.' に戻るため）
+    for (let y = 0; y < s.h; y++) for (let x = 0; x < s.w; x++) {
+      const c = s.grid[y][x];
+      if (c === '~' || c === 'o') k += c + (y * s.w + x);
+    }
+    return k;
+  }
+
+  // 幅優先探索で最短手順（ヒント用）
+  // 最短手順の探索（幅優先）。
+  // lv を渡すと、収録の最短手順上の局面を「残り手数が分かっている近道」として使う。
+  // 収録手順は最短なので、その途中局面からの残りも最短。深さ d で見つけた近道の合計 d+残り が
+  // まだ調べていない深さ以下なら、それが最短と確定する。
+  // 戻り値：手順の配列 / null（解けない）/ 'limit'（探索上限）
+  function solve(s0, limit = 400000, lv = null) {
+    if (s0.won) return [];
+    const cells = [];
+    for (let y = 0; y < s0.h; y++) for (let x = 0; x < s0.w; x++) if ('~o'.includes(s0.grid[y][x])) cells.push([x, y]);
+    const key = (s) => {
+      let k = s.gateOpen ? '1' : '0';
+      for (const t of s.stones) k += t.alive ? String.fromCharCode(65 + t.x * 16 + t.y) : '!';
+      for (const [x, y] of cells) k += s.grid[y][x];
+      return k;
+    };
+    const book = new Map();
+    if (lv) {
+      let b = initState(lv);
+      for (let i = 0; i < lv.sol.length; i++) {
+        // 氷の升の並びが同じ盤でのみ比較できる（初期盤が同じ面なので常に同じ）
+        if (!book.has(key(b))) book.set(key(b), i);
+        b = move(b, lv.sol[i][0], lv.sol[i][1]).state;
+      }
+    }
+    const pathTo = (qi) => { const out = []; for (let j = qi; par[j] >= 0; j = par[j]) out.unshift([mv[j] >> 2, 'UDLR'[mv[j] & 3]]); return out; };
+    const fromBook = (qi, bi) => pathTo(qi).concat(lv.sol.slice(bi));
+    const k0 = key(s0);
+    if (book.has(k0)) return lv.sol.slice(book.get(k0));
+    const q = [s0]; const par = [-1]; const mv = [0]; const dep = [0];
+    const seen = new Set([k0]);
+    let best = null, bestLen = Infinity;
+    for (let qi = 0; qi < q.length; qi++) {
+      if (dep[qi] + 1 >= bestLen) break; // これ以上浅い手順は無い
+      const s = q[qi];
+      for (let i = 0; i < s.stones.length; i++) {
+        if (!s.stones[i].alive) continue;
+        for (let di = 0; di < 4; di++) {
+          const r = move(s, i, 'UDLR'[di]);
+          if (r.result === 'none' || r.result === 'fall') continue;
+          if (r.result === 'goal') {
+            const out = pathTo(qi); out.push([i, 'UDLR'[di]]);
+            return out;
+          }
+          const k = key(r.state);
+          if (seen.has(k)) continue;
+          seen.add(k);
+          q.push(r.state); par.push(qi); mv.push(i * 4 + di); dep.push(dep[qi] + 1);
+          if (book.has(k)) {
+            const tot = dep[qi] + 1 + lv.sol.length - book.get(k);
+            if (tot < bestLen) { bestLen = tot; best = fromBook(q.length - 1, book.get(k)); }
+          }
+          if (q.length > limit) return best || 'limit';
+        }
+      }
+      q[qi] = null; // 展開済みの状態は解放
+    }
+    return best;
+  }
+
+  const API = { parseLevels, initState, move, solve, key, clone, DIRS };
+  if (typeof module !== "undefined") module.exports = API; else root.Suberi = API;
+})(typeof window !== "undefined" ? window : globalThis);
+</script>
+<script type="text/plain" id="levels">
+1-1 3 0D0L0D
+......
+......
+......
+#..A..
+......
+...#..
+G..#..
+
+1-2 3 0D0L0U
+...G#.
+#.....
+.#..A.
+......
+..#...
+....#.
+......
+
+1-3 3 0L0U0R
+#.....
+.G....
+.##...
+......
+..A.#.
+......
+..#...
+
+1-4 3 0L0D0R
+#.#...
+#...A.
+......
+..#..#
+..##..
+......
+...G#.
+
+1-5 3 0D0R0U
+..#...
+#.....
+..A.#.
+.....#
+.#.##.
+#....G
+#.....
+
+1-6 5 0R1U1L0L0D
+....#.
+......
+.#.#.#
+..A...
+.G#...
+......
+#..b..
+##....
+
+1-7 5 1U1L1D0R0U
+.##...
+#.#.##
+.#.#..
+......
+...G..
+.A....
+..#.#.
+.....b
+
+1-8 5 1L1U1L0D0R
+......
+A.....
+.G..#.
+......
+...#.b
+.#....
+......
+......
+
+1-9 5 1D1L1U0L0D
+...A.b
+......
+....#.
+......
+......
+..G...
+..#...
+#.....
+
+1-10 5 1R1D1L0D0R
+A....#
+.#.b..
+....#.
+......
+...#..
+......
+...G..
+......
+
+1-11 6 0L1D1L1U0U0R
+..#...
+..G.#b
+......
+..#...
+......
+.....#
+......
+..A...
+
+1-12 6 0R1D1R1D0D0L
+.....#
+#bA...
+......
+##....
+....#.
+.#....
+#.#.G.
+......
+
+1-13 6 1U1R1D0R0D0L
+#.....
+......
+.b##..
+......
+.##A..
+#.....
+G.....
+#.....
+
+1-14 6 1D1R1D1R0R0U
+##b.#.
+....##
+......
+...###
+...#.#
+...G##
+..#.#.
+A....#
+
+1-15 6 0L1D1L1D0D0R
+..A...
+.#..b.
+......
+......
+..#.#.
+..#..#
+..G.#.
+......
+
+1-16 7 1L1U1R0D0R0U0R
+......
+....#.
+A...#.
+..##..
+...G..
+..#...
+......
+.b#..#
+
+1-17 7 0R1R1U1R1D0D0L
+.#..A.
+.#..#.
+......
+..#...
+#..G..
+#.....
+...#.#
+b.##..
+
+1-18 7 1R1U1L1D1L0D0R
+A.....
+......
+...G..
+......
+.#....
+......
+.#....
+.b....
+
+1-19 7 0D1R1U1L1D0R0U
+...#..
+..#...
+...#..
+...G..
+......
+A.....
+.#....
+...b..
+
+1-20 8 0L1L1U1R1U1L0U0R
+..#...
+...#..
+...G..
+..A...
+...#.#
+...#..
+.....b
+......
+
+2-1 6 0L1U2D0R0U0L
+.#..#.#
+.G.#...
+##b....
+.......
+.......
+.......
+...b...
+...A..#
+
+2-2 6 0R1D2D2L0L0U
+..b#G..
+......#
+.......
+#...b..
+.......
+...#.#.
+.......
+A......
+
+2-3 6 1D2L2D0L0D0R
+....##.
+....#..
+b..b...
+..##..#
+.A#....
+......G
+....#..
+..#....
+
+2-4 6 1R2R0D2D0R0U
+##..#..
+...#G#.
+#A#....
+..#.b..
+.......
+#......
+.b....#
+.......
+
+2-5 7 0D2D2R2U2R0U0R
+b..#...
+b...#..
+......#
+......G
+......#
+.......
+.....A#
+......#
+
+2-6 7 0L0U1U2U0R0U0L
+..#....
+.......
+G......
+.......
+#.#..b.
+.....b#
+.#.....
+.A.....
+
+2-7 7 1R1D2L1L0D0L0U
+.......
+....#..
+...#...
+.......
+b......
+#.G#A..
+.......
+....b..
+
+2-8 7 0L1L1U2U1R0D0L
+.....##
+.#...A.
+.G..#..
+....#..
+.....##
+.#..b..
+#......
+..b#...
+
+2-9 8 2U2R2D2L2U2R0R0D
+.#...#.
+...##..
+#A.....
+b##...#
+#......
+.......
+.....G.
+b.#....
+
+2-10 8 0R1D2L1U1L0U0L0U
+.#.#b.b
+G#.....
+...#...
+#.....#
+......#
+.......
+A..#...
+.##....
+
+2-11 8 0D0L1L1D2L1U0U0R
+...b..A
+..b....
+.##..#.
+..G#...
+.......
+.#.....
+.......
+.......
+
+2-12 8 1U1R2U2R2U0L0U0L
+......#
+....#..
+....G..
+....#.A
+.#....#
+......#
+.......
+..b#b..
+
+2-13 9 0L1D0D0R0D0R2R0U0L
+.A.##..
+.#.#...
+b##....
+.......
+..b....
+...#G..
+....#..
+.......
+
+2-14 9 0U0R0U1U2U2L0D0L0U
+.#...#.
+G#.....
+b..#...
+##...#.
+...b.#.
+A......
+...#...
+.......
+
+2-15 9 0D2D0L2U2L2D2R0D0L
+.......
+..#.b..
+.bA....
+#......
+G.#....
+..#...#
+#.###..
+..#....
+
+2-16 9 0R0U2L1D1R1U0L0U0R
+..##...
+....#.#
+.#....G
+....#..
+...#..#
+b..b...
+...#A..
+#..#...
+
+2-17 10 0D0R0D0R2R0U0L0D0R0U
+....#.#
+#A.#...
+#...#..
+.#.....
+b......
+.##.G.#
+##.....
+b......
+
+2-18 10 0D0L0D1L1D0R0U1R0D0R
+...#..A
+....#..
+.......
+..b....
+.......
+.#..G.#
+....#..
+....b.#
+
+2-19 10 0D1D1L2R2D2L1U0L0U0R
+#bb...#
+....A.#
+.......
+.....#.
+.....G.
+.......
+.....#.
+.......
+
+2-20 11 0U2U1R1D1R2D2L2D0D0R0U
+b......
+#..#...
+.#.....
+.#..Gb.
+.......
+.###.#.
+......#
+A#..#..
+
+3-1 6 0U1U1R0R0D0D
+#.....#
+....b..
+...*...
+#..b*..
+.......
+#...G..
+..A....
+..*.#.#
+.......
+
+3-2 6 1D1L2L0D0L0D
+*......
+.#..#..
+.......
+.#..#..
+...*b#A
+.*....b
+...G#.#
+...##..
+...#..#
+
+3-3 6 0D0R1R2R0U0R
+A*##...
+...*.G.
+.....#.
+.*.....
+..#..#.
+...b...
+.......
+...b...
+....#..
+
+3-4 6 1D2R0D0R0U0U
+*...#..
+...#...
+...G.#.
+..#*...
+.A.....
+.......
+.......
+.....b*
+b......
+
+3-5 7 0U0U1U1L1U0D0R
+.....#.
+.......
+.....G.
+.*#..#.
+#...*..
+.Ab....
+....*.#
+.....b.
+.....#.
+
+3-6 7 0R1D2U2L0U0R0U
+.....#.
+.#...#.
+....b..
+#.#...#
+...#*.G
+.*..#..
+*.#...b
+A.....#
+.......
+
+3-7 7 1L1D1L2L1D0L0U
+..#*...
+.*....#
+..G....
+.......
+....*.b
+#....#.
+...A#..
+#.....b
+..#.#..
+
+3-8 8 0R0D0D1D1R1D0D0L
+b#...A.
+.......
+...*..*
+.*b#..*
+.......
+#......
+...G...
+##.#...
+......#
+
+3-9 8 0U0L1R1U1R1U0U0R
+..*#..#
+....#.G
+....#.#
+.......
+*.#*..#
+.b..#..
+.....#A
+.b#....
+*..#...
+
+3-10 8 0U2U0R2R2D0D0D0R
+...b...
+..*#...
+.A.....
+.b....*
+.....#.
+.#...G.
+.#...#.
+..#....
+...*..*
+
+3-11 9 0R0D1U1L1D1L1D0L0U
+.....*.
+......b
+A.....#
+..*...#
+.#.G..*
+......#
+.#.....
+.#*....
+.......
+
+3-12 9 0R1L1D1D1R1U1R0D0L
+...b*..
+.......
+.....#.
+....A..
+*#...G.
+.......
+.....#.
+..#.*..
+..#*.#.
+
+3-13 9 1D1R1D1R1D1L1L0D0R
+b......
+......#
+..#.##.
+#*.....
+.....*.
+A...#..
+....G#.
+.....**
+.......
+
+3-14 9 0U0U1R2D2L1D2R0R0U
+#.#.#..
+..##...
+*..b...
+##..#.b
+...#G#.
+.*.....
+..#*#.#
+.#.....
+.**A...
+
+3-15 10 0U0U1R1U1U0L0D0R0U0L
+......#
+.......
+.....*.
+...#G..
+*......
+#.....*
+.#####A
+b......
+*......
+
+3-16 10 0U0U1R1U1L0D0R0U0L0D
+.......
+.......
+...#G#.
+.......
+*..##..
+..*....
+.#...#.
+*.A*...
+..*.#b.
+
+3-17 10 0D0L1D1R1R1U1L1U0D0L
+.##b#..
+....A..
+b......
+.......
+#......
+G.*.#..
+#*....#
+.*.....
+..#..**
+
+3-18 11 0R0D0R1D1L1U1U1R1D0L0D
+......*
+..#..#.
+...*.#.
+.b.....
+.......
+#..#..*
+.A.*##.
+*......
+...#G#b
+
+3-19 11 0R2L2D0D0R0U0U1R1U0D0L
+.*.....
+##*..*.
+A.#.G..
+*.#.#.*
+.......
+....#..
+...#.#.
+b..b...
+....#..
+
+3-20 12 0U0R1D2U2L2L0U0R0D0R0U0L
+..##..*
+b....#.
+....*..
+#...#..
+*.#...#
+A#G..b.
+#......
+.*.....
+.*.....
+
+4-1 6 1D0U0R2R0D0L
+#......
+.#b....
+...#...
+.#o..G~
+b.A..~.
+.....~.
+.....#.
+#...~#.
+....~~.
+
+4-2 6 0U2U2L1D0R0D
+.b....~
+...b..~
+.o.....
+.......
+.......
+.G.~~..
+~#.....
+A#...##
+..~....
+
+4-3 6 0U2U1R1U0L0D
+......~
+.......
+#...G..
+....~..
+....~..
+...~#o.
+#b.~...
+...#b.A
+...~...
+
+4-4 6 1U1R2D0R0U0L
+o.~....
+...#...
+.......
+..#bG..
+....#~~
+..#.~..
+..A...b
+...#~..
+....~..
+
+4-5 7 0R1R1D2R1U0U0L
+#...b.~
+.b~....
+....#..
+~..#G..
+~~...o.
+.......
+....~~.
+#...##.
+...A...
+
+4-6 7 2U2R2U2R1U0U0R
+.~...#.
+..~...#
+..#...G
+#.....#
+....b~.
+....~~~
+...#.~.
+b.o.A..
+.......
+
+4-7 7 1D1R2R2U1L0D0L
+..o.b..
+......A
+..#...~
+..G~~..
+....#..
+.......
+.~~.b..
+.......
+.....~~
+
+4-8 8 1R1D1L1U1L1U0U0L
+...#~..
+.o.#.b~
+##.....
+#.##.#.
+G..#...
+..#...~
+#.~~~.~
+.....o.
+.A...~.
+
+4-9 8 1R0R2D2R2U0L0D0L
+#A.b...
+~#....#
+~..~~#.
+.......
+#......
+Gb...~.
+#...#~.
+.#.o.~#
+.##....
+
+4-10 8 1R1D1L2U0L0U0R0D
+~~.....
+b.~~...
+...~...
+~..~..#
+...#...
+..G....
+.A..o..
+b......
+..o...~
+
+4-11 9 0L0U2U2L2U1L0D0R0D
+.o.#..~
+....~~~
+...~~..
+.o....b
+..A#~~.
+...#...
+...#..G
+#.....#
+...b#..
+
+4-12 9 1R1D2R1R0U0R2D2L0D
+#b.##..
+...b...
+#.#.o.~
+#...G.#
+.......
+.~~..~~
+.~...#.
+o...~..
+..#A~..
+
+4-13 9 0L1R1D1R1D1L2D0D0R
+.......
+#...A..
+.......
+~......
+~.#b~.#
+...o~..
+~~...#.
+~bG~...
+.o.~...
+
+4-14 10 0D1R1D1L2U2L1D0L0U0R
+b..~..G
+#.#...~
+~~#~..#
+#o.....
+.....~#
+.....##
+#.~o.A.
+......b
+~....~.
+
+4-15 10 0U1D2R1U0R2U2R2U2L0D
+..~....
+...o..#
+.....#.
+A......
+.....#.
+~~~G...
+o~.#b#.
+.~.~.#.
+b....~~
+
+4-16 10 0U1D1R1D1L1U2L2U0L0D
+o~~..b~
+....#~.
+.G.~.#.
+...~##A
+.....~.
+......b
+.o..#..
+......~
+...~#..
+
+4-17 11 2R1R1U1R1U1L2U2L0D0R0U
+A...~.#
+o...~~.
+....#..
+~G.~~..
+..##~~.
+.....~.
+bb..#..
+.#..o~.
+....o.#
+
+4-18 11 0U1U1R1D0R1L1D2U0D0L0U
+..~....
+..~...~
+...~.~.
+....o..
+.#Abo#.
+.G#..#.
+o..#...
+~.~~...
+..~~..b
+
+4-19 11 1R0D1L0U2L2U2L2D2L0D0L
+.~.....
+#o....#
+.o...#.
+.~.....
+~..~.~.
+.oA~.~.
+#G...~.
+.#...~~
+b.....b
+
+4-20 11 1D1R1U2L2U0R2R1D1R0U0L
+..~~~o~
+.......
+b.#....
+.~..#G.
+#....#~
+.A..b..
+~~~..#.
+.o.o...
+.~....#
+
+5-1 6 0L0U1R1D0D0R
+..b....
+.#.....
+.G.....
+......<
+.#.....
+.#.....
+...A.#v
+..#...#
+......b
+
+5-2 6 2U0U0L2U0R0D
+.......
+..G..##
+..#....
+..#....
+b#>.A..
+<...#..
+..b...#
+.......
+.#.....
+
+5-3 6 0D1U2L0D0L0U
+.......
+....A..
+...#..#
+....>..
+.......
+.#.....
+.G..#..
+.......
+.<.b..b
+
+5-4 6 1L0D0L0D2U0U
+...A...
+....#.#
+...b.^.
+..##...
+.......
+#...#..
+...G...
+...b.#.
+.>..#..
+
+5-5 7 1U1R2R2U1L0D0L
+......#
+.....#A
+..#.G..
+....>.^
+....^..
+...#.b.
+.##....
+#..b.##
+.......
+
+5-6 7 0R0R1R1U2U0U0L
+.#.....
+..Av..^
+#G.....
+b......
+......b
+.#.....
+...##..
+.......
+#......
+
+5-7 7 0U2D2R2U1R0R0U
+...b.v.
+....#..
+.......
+.......
+...#^..
+b..#G..
+.......
+.#.A#.<
+.......
+
+5-8 8 0R0U0R0D1R1U0U0L
+.......
+..#.G..
+....#..
+..##...
+..A.<..
+#.<#b..
+.b...#.
+.......
+...^...
+
+5-9 8 2R2U0L0L2L2D0R0D
+>.#....
+.....^A
+...#..#
+....#..
+.b.#...
+.#G.b.#
+#......
+<#.....
+...#...
+
+5-10 8 0L1U0D1U2R2U0U0L
+.......
+....v..
+......#
+.....#.
+...G.>.
+..A#...
+.......
+>......
+b.#b...
+
+5-11 9 0D1L2U2L2U2R0U0R0R
+..A#.bG
+#^...^.
+......#
+.......
+.....#.
+#......
+...<...
+.......
+..v#.b#
+
+5-12 9 0L0D1D2L1L1R0L0L0R
+.....>.
+....b.A
+.......
+..#....
+.......
+..b....
+..Gv...
+^....#.
+.^..#..
+
+5-13 9 0L1U2D2R2L2U0U0U0R
+#......
+..<..#.
+b.G#..#
+.......
+..#.#b#
+.#...v#
+>..#..v
+.....#.
+...A...
+
+5-14 10 0L0U0R0D1U1R1U0R0U0L
+#.>#.#.
+#..v#G.
+.....#.
+..A#<..
+.......
+.>...<#
+......#
+...b...
+.......
+
+5-15 10 0R0D0L1D1D1R1U1L0D0L
+b<.#...
+.......
+>.....b
+....#.^
+.A>....
+#..#...
+#..G..#
+...#...
+.......
+
+5-16 10 0U1L1U1R2U2R0R0D0R0D
+.......
+.......
+....^.^
+.....#.
+.......
+.....vG
+....#..
+.....b#
+A#b.>.#
+
+5-17 11 0D0L0U1U1L1D0R1R1U0D0L
+.......
+.......
+....#..
+..v..#.
+....G..
+...>...
+....##b
+>.b#<A.
+.v.....
+
+5-18 11 0L1U2U2L0U0R0D2U0R0R0U
+....<.#
+..#....
+..#.#.>
+....vG#
+..^....
+#....#b
+...#..#
+....b..
+.v...A#
+
+5-19 11 1U1D1L2U2L0D0L0D0L0D0L
+....A.#
+.##..>.
+.......
+...#.b.
+...#...
+^......
+......>
+#^>##.b
+G.##...
+
+5-20 12 0U1R0R1D1L1L1U1R1U1R0U0L
+.^.#...
+#>.#.G.
+......v
+.>..b..
+..#....
+....##.
+.......
+...A#..
+..v....
+
+6-1 7 0D1L1U2U0L0U0R
+....#..
+....##.
+_bG.#..
+....#.A
+....|..
+..#.#.#
+b...##.
+....#..
+....#..
+
+6-2 7 2L0U0L1D0D0R0U
+.......
+...#G..
+.......
+b....#.
+||#####
+_...b..
+.......
+#......
+.A....#
+
+6-3 7 0R1R2D2L0D0L0U
+.......
+.....##
+.#b..._
+...A.b.
+.......
+####||#
+.......
+...G...
+.#.....
+
+6-4 7 0L1U2U2R2D0D0R
+.......
+...._..
+....#b#
+b..A...
+.......
+#|#|###
+.....#.
+#..#..#
+..G#...
+
+6-5 8 0U1D2U0R0D0R0U0R
+...#...
+...|..G
+.b.##..
+...#...
+..b#..#
+A_.#...
+...#...
+.#.#...
+..##...
+
+6-6 8 1D2U0L2D1L1D0D0R
+...#...
+#..#...
+...#...
+...#.#.
+_..#.b.
+..A#...
+b..#...
+...|..G
+...####
+
+6-7 8 1L1D2L0D0L0U0R0D
+.......
+......G
+.......
+##|####
+.......
+..b....
+....A..
+_......
+#...b.#
+
+6-8 9 1L1U2U1R1L2L2U0R0D
+.A.....
+.......
+..G....
+.......
+|##|###
+.#.._..
+...##..
+.#..bb.
+..#....
+
+6-9 9 2L2D0L2U0U2R1R0R0D
+.b..|..
+...b#..
+....#..
+....#G.
+...##..
+..A.#..
+..._#..
+....#..
+.#..#..
+
+6-10 9 1U1R1D2U0R0D2L0L0D
+.##....
+..#..A_
+..|....
+..#....
+.G#...#
+.##.b..
+#.#..b.
+#.|....
+..#....
+
+6-11 10 2U1L1D2R2D1R0U0L0U0R
+...G.b.
+.......
+....._.
+...b#.#
+#......
+##|#|##
+#......
+....A..
+.......
+
+6-12 10 0U0R1L2U2L1D1R1U1L0U
+.......
+.......
+......G
+######|
+.......
+#.._..b
+......b
+...#A#.
+.......
+
+6-13 10 1D2L2D1L2U2R0D0R0U0L
+.......
+....b.b
+......#
+..._A..
+.......
+.......
+####|##
+.G.....
+.......
+
+6-14 11 1L2U2L1D1R2D1D1L0L0U0L
+..b....
+._.....
+G.#...b
+#||####
+....A..
+.#.....
+.......
+.#...#.
+.......
+
+6-15 11 0D1U2U1L1R2R2U2R2D0R0D
+.#.....
+A......
+.......
+.......
+#####|#
+.._....
+...b...
+.b....#
+..#.#G.
+
+6-16 11 0R1D1R0D0R1U1R2U2R2U0L
+..#....
+..#A.#_
+..#..#.
+..#....
+..#....
+..#...#
+..##...
+G.|b...
+#.|..b.
+
+6-17 12 0D1R2R1D2L0U0L0U0R0D0L0U
+..#....
+#.|....
+..#....
+..#....
+G.#...A
+..|.b..
+..#....
+..#._b.
+#.#....
+
+6-18 12 0L1D1R2U1U1L1U0U0R0D0L0U
+..#.#..
+..|....
+.A#.#G.
+..#....
+..#....
+..#.b..
+..#...b
+.##._..
+..#.#..
+
+6-19 12 1R1U1L2U2R2D2R0U0R0U0L0D
+.......
+#G...#.
+.....b.
+.#...#.
+.......
+##|##|#
+..#....
+b......
+#..._A#
+
+6-20 13 1L0U0R2R2U2L2D1R0D0L0D0L0U
+#......
+.......
+.._....
+A....b.
+b....#.
+##|###|
+G...##.
+.......
+.......
+
+7-1 8 0R1R1U2L0D0L0U0L
+#*#....
+.o.....
+..G..>.
+...~~..
+..>...*
+#A.....
+....~..
+..b..~b
+.#.....
+...b#..
+
+7-2 8 1L0L2U2R2U2L0U0R
+...~..v
+~....*.
+.....*#
+.......
+...G.#~
+...v#..
+ob..A..
+#...#b#
+...b.#.
+.##..~.
+
+7-3 8 1U0L2D3R3U0D0L0U
+......A
+..b..#.
+^.....#
+..#....
+~~.o...
+*~#....
+.#G...#
+*...b.#
+.>.....
+~#b...#
+
+7-4 8 0D0R1U3D2R2D0D0L
+.#_....
+..bA.*#
+.......
+o.~....
+..~~~##
+..>....
+#|####|
+G..b..b
+.v#.#..
+...*.#.
+
+7-5 9 0U0R0U1L2L2U2R0D0R
+...#...
+....*.#
+.#>....
+..#.#o.
+..*....
+.#~G.b.
+~..##..
+.......
+#..<b..
+.A~~#..
+
+7-6 9 0L1L2U2L3L3U0R0U0R
+~.....b
+..G#..b
+v....#.
+.~..*.~
+.o.....
+..#.#..
+*A#...#
+#~.b...
+..^....
+#......
+
+7-7 9 1D3L3U3R3D3L0U0L0U
+.G#o...
+b....b.
+...~~..
+#####|#
+.^#.^A.
+..*...#
+...b...
+_.~..~.
+.#.....
+....*..
+
+7-8 10 0R2U2R1L1R2U0L0U0L0U
+Gv.b...
+.......
+..~~..*
+...~~..
+..#....
+#..o..>
+.......
+.b##...
+#.#*..#
+#.A....
+
+7-9 10 0L0D1D1R2R2U1R1U0R0U
+#..~..A
+#.v.#G.
+.~v...o
+.~.....
+....#.#
+......~
+.*.....
+.....#.
+...b#..
+....*b.
+
+7-10 10 0L0U0L1D1L0U2R2D0R0D
+#...#.b
+......>
+.b.#...
+~.o....
+..G#...
+....v~.
+....~~.
+..#...A
+.....*.
+...#*..
+
+7-11 10 2R2D3D0D0R2D2U0U0R0U
+#..#.*b
+...#..~
+b.~#...
+.#.#...
+.#.#G..
+A.*|.##
+.^~|~<o
+b#_#...
+...#...
+.#.#...
+
+7-12 10 0D3L0D3R3U2R2U0R0U0L
+.<...~.
+Ab#G...
+.#.#~.*
+.*.#..~
+<...o.#
+.b....~
+..b....
+.......
+.......
+..#....
+
+7-13 10 0L0D1D3R3U2L3L0U0L0U
+.#*..*.
+.#.b...
+..#...A
+.G#..<b
+......~
+......~
+v#....~
+...~.b.
+.....o#
+#.....#
+
+7-14 11 1D2L3R3D0L3R3U0R0U0R0D
+#.~~...
+...#...
+#..~...
+##b...G
+..*_.b*
+#####|#
+..b...A
+.~^##..
+....##.
+....v#o
+
+7-15 12 0L1D1L1D1L2L2U0R0D0L0D0R
+<....~A
+#*.*b~b
+...#..#
+..#~...
+..<.#.~
+.#.....
+.......
+.G.....
+.....o.
+...#.#.
+
+7-16 12 1R1D1D1L2U2U1R1D0D0L0U0R
+b~...#.
+.......
+....>.A
+~......
+~^.~.#.
+.....Go
+.......
+..##.#.
+*......
+b...*##
+
+7-17 12 2L3R3U3R2R3R3R3U0R0D0L0L
+b~....#
+#o.....
+..^.##.
+.A.....
+####||#
+#..#...
+~......
+~G*_*b.
+v...#..
+.b~#..#
+
+7-18 13 0U2U2L1U2R2D2L2U1R2R0D0L0L
+...*.#.
+...v...
+.....>A
+.....~#
+.*.....
+b...#..
+....o..
+~#.....
+..G..~~
+..b.###
+
+7-19 13 0U1L1D1R2L0D0R1D2U2R1U0U0R
+......#
+^...#.#
+...~.*.
+......b
+..~..#.
+*.~..##
+.....<G
+.#....o
+......#
+A.b.#~.
+
+7-20 13 1D1R1U2U2R2U2U2U2L2U0L0U0R
+v.#..G#
+.b...oA
+._..~.#
+.#.....
+.....#*
+......*
+####|#|
+...~~..
+..^~...
+b..b..#
+
+8-1 10 0D0R0U0R0U1U2U0L0U0L
+.#.~v..#
+#o....*.
+.G......
+.......~
+#.#....~
+A#.#.#b#
+..#^....
+........
+..~^.b#.
+.~*...#.
+
+8-2 11 0L0U0U2L2U2U0R2R2R0D0R
+b.....~.
+...#..#.
+..*oG.##
+..>#~#..
+.....v..
+........
+*.#.#>..
+.......A
+...~~.b.
+...~....
+
+8-3 11 0R1L2D2L0D3R0R0U0U0L0D
+##.....#
+#....#..
+..G..#*~
+.>.....~
+_..~~..b
+..#~o*..
+#.#.....
+######|#
+A.b.<...
+.<....b.
+
+8-4 11 1D0U0R0U0L2U0R0D2R0U0L
+.^#...*.
+...~..~.
+..G~....
+..#.....
+v.#.....
+..##.~~.
+A....o..
+b.#...b.
+........
+...v.*..
+
+8-5 12 0D1D0U2U2L2D3L3D3R3U0L0L
+.G.^..|.
+#*...<#b
+.#..b.#.
+....###.
+..~~o.#.
+....b.#.
+......#.
+~.#..*#A
+~#_...#~
+..>...#.
+
+8-6 12 0R1R0D2R0U0L0L0D1D1L0U0R
+......~~
+...#.#.~
+b..A....
+........
+#.#b>...
+......*.
+..G~..#.
+.^......
+.#o..~*.
+#....^.#
+
+8-7 12 0L2L0D1L1D3U3L3U3L3D0L0D
+...#..Ab
+.#~#....
+####..##
+<..#_.#v
+#.~#..##
+#..|~~..
+...#~..b
+..*|....
+#.*#..b#
+.G>#o...
+
+8-8 13 0U1L2U2L2D2U2L0D0R2R0D0R0R
+..#...Gb
+...#....
+...~.^b.
+.*#.<...
+....~~o~
+....~.#.
+.......#
+........
+..#..#.#
+A#....<*
+
+8-9 13 1R1D0R1R2L0D2R0U2U2D2R0D0L
+.**.....
+..v.....
+....##.#
+.~>.~...
+.~......
+#~...#..
+.<b.#G..
+A.....o.
+#..#..~.
+...b#.#.
+
+8-10 13 0R0U0L1U1L1U2R2U2L2U0U0L0U
+.......~
+._.~..v.
+..##.~~o
+#......*
+G..b.<#.
+......b.
+######|#
+.....#..
+.......^
+..*~A...
+
+8-11 13 0L1D1R1D1L1U1L1U0R1D0L0D0R
+.....*..
+........
+*.#..b..
+~~b...#^
+..~^....
+##~###..
+..#o..#.
+.....A..
+##v.#...
+...G.#.~
+
+8-12 14 0D1R1U1R2U2R2U2R2U0U0L0R0D0R
+#.....#A
+.#..v...
+.b~#..#.
+..#.#.#>
+......#.
+.*....*#
+....b..~
+#..~~.G.
+..~..#^.
+o.#.....
+
+8-13 14 1D1R1U2R2D0U3U3L3U3R0R0D0L0D
+b#.#.._#
+*..|....
+...#...~
+.b.#G..#
+#..#*...
+..o#..~~
+.>A#v...
+...#...~
+..<#...~
+...#...b
+
+8-14 14 1U2L2U2R2R2U3U3L3U3L2D2U0R0D
+.#.A~...
+###>.~..
+.#...o.#
+.*..G#..
+..~.#.>~
+.......~
+b.......
+.....#..
+.v#.*.#.
+.....b.b
+
+8-15 15 2R2U2R3L3U3R3U2L2U2R0U0L0D0D0R
+..~....o
+*.~~..#A
+...#.#.#
+~....~v.
+...G....
+b#.*....
+........
+#...<...
+b...#..#
+..b.^#..
+
+8-16 15 1D2U2R1L1R3D3L3R2U2R0U0L0U0U0L
+..#G..#.
+..~..*|.
+.~..#.|.
+<~.._.#.
+.#.o..#.
+..b.#.#.
+b.v~.b#.
+.#....#.
+..~.*.#.
+^.....#A
+
+8-17 15 0L1U1R3R3U2R3L2U3U1L2L2U2L0U0U
+......#<
+..#._.~~
+v..<##b.
+G#.#.##.
+*#b...b.
+.#.....#
+.o*#..#.
+||######
+....~~~.
+..A.....
+
+8-18 16 0U1R2L2U2U3U3L2U1L2L0R0D0D3L0L0D
+.o.b....
+A.#..~..
+.#...~v.
+####|##|
+.v..._..
+....>#..
+....*..b
+##G....~
+.~.#...~
+....*#b.
+
+8-19 17 1R0D0L0D0R0D3U3U3D3R3U3L3D3R2L0L0D
+>.#..#.A
+.....#o.
+....~#..
+*#..##*.
+...~~#b.
+...._#.^
+~~.#.#..
+.....|b.
+.G<.##.#
+b##..#..
+
+8-20 17 0D1D1R1D0D0L0U2D2L3L2D3D2L2D0L0D0L
+...#~#..
+#*.###.A
+>....#b.
+.^...|.*
+#~#b^#..
+#.~.##..
+.b.#.##.
+.###.|..
+_...~#..
+.G~..#.o
+
+</script>
+<script type="text/plain" id="snd-crack">data:audio/mpeg;base64,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</script>
+<script type="text/plain" id="snd-gate">data:audio/mpeg;base64,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</script>
+<script type="text/plain" id="snd-goal">data:audio/mpeg;base64,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alKplgamVlOdLnCetkrvUurtR9wRVDG6E9ls5nz0E0P2dlkoBFQHeJU4tS//9SxdAGj0TZv/26hEw2pP7f/////qOhADOyHlw0Pq1RAMgAUAfvDOpK3QEbM2rBki4KO9fsSM//NAxGUTSkqlvg6ojwxkbNhesck4vUv+ZMkkPkDBswtNIsYpf/+mYCewMqWIoef/9uoIgSOX//////+syAQAHphxHoISAwCyQBQB3l/+8tCAGExG2d2mxyqxIGQBqEQiVM36pcsUm/n/80LEchO6Qpz2BqhTiqiXgNjAtaKqTf/+gbk4Az0i6//7dQiIhjf//////0BAIlnHYT5mhVUQHICAD9Z4V5Q6YgMjSjNf7F5zOpNs8EccjYzhcUH3u8dv1FhdzwEqYXWLbP//9EY4DXj/80DEfxLaSqWWBqZXMghPI//+4nkKGDz///////UUwICy+omy4BqqAwAEEBABjlZ/mUZCoocSDsFYNLbVindgwlODHgMgDNJq00E/yyhk2BoCIc80dv//WcErAwBhIqv//7jOA4q3///zQsSOE1pCmO4G6Ff////+syAgGIkiXpxdAgAFEADgD94Z1JW6AXYnhZLMYpb5y1DpjUpSlR0eqly36Kv5g7LHwBk2QnQvoL//9AzEYAZQ6QM+3/79YZwCgFD//////92DQxvOVDdOlf/zQMScEyo+ma4G6FMAQAAwQAAcAZY5fljDQMJzmhZdSsMus50DRQrLg5NZ8yyK2udZ/6bOZDdAhHD2SOOqX//00BzwN+CGYMl//v1hEMP6v//////1FMAwSRNAi5cQHABAKAP1nUlc//NCxKoTokaVtgaoVTCt5gSgdwrjwOmfOZV4gluYZumcg6N69ZBf57P/Jk2RMRXgM1kE5F1L//7JCEIHeHClyCmyP/30jEGo4ESM2b//////1LI4CiIgyJlOrQBAABQMAMcsdY1n1Bp0//NAxLcUukaSXgboVXVk6mqI0O1q9I45jRmGb4jBWU3N69S/1EcikkQEDYrRJTZn//61HQ4QGTVmpJIv//0Q/IHMz7f//////cugDBxguWjddKoDBgB+8M6SG2AGAnp26ITACvJfetX/80LEvxVqPoRmBuhVKyoxSCDtohAW5y7HL0v6x/UtEtgjEB5zzt//1JlAMXgaNkLkLT//+gJvBZ8bt//////9AmwMIHFv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</script>
+<script type="text/plain" id="snd-knock">data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//NwwAAAAAAAAAAAAEluZm8AAAAPAAAACQAABGIAQUFBQUFBQUFBQUFZWVlZWVlZWVlZWXBwcHBwcHBwcHBwiIiIiIiIiIiIiIigoKCgoKCgoKCgoLi4uLi4uLi4uLi40NDQ0NDQ0NDQ0NDo6Ojo6Ojo6Ojo6P//////////////AAAAAExhdmM2MC4zMQAAAAAAAAAAAAAAACQEOAAAAAAAAARiAhQ48QAAAAAAAAAAAAAAAAD/80DEAA5IQsh3SQAAAhK3JqANk+qBQEAQDDEIWjRo23g+D4Pg++GOoEHegH35c/1g//B99n1AhlAxOf//8vLg+H//+XfKKhw8IDKia10BBrFzkrWy0+U1HFyRpXtJG7sAEKKTLOSlJP/zQsQhHMnK2MmYMAAxZFJpZab3KIs5u/pNjmOO2n5r49E9Lr9knnFVv/d/sYneW8a1b/vbx9bzuuhhVToHKhkXHPMxhW5Es0IkBweB9J4YKPKHGFnbSOk3Cv+NCf/MVd1aWlHJo4vzZv/zQMQJFqoGuAHYGACbnaybz9Wr/N63+WXd1rRKsPwTnswZkYGzH7MuwEzDnShLrNVI74I36cOqsYCRynJVkOqbOX36Wsh+SxzDHchIBFHhx+Kg1Ft7n7CLbFP9KPzaDFasIEWmYXqF//NCxAkWoT6dkgvGDKMc4lcvULRkcBRnGCoFQmARhWlUM1UKThZ0GYqqq7QiZj7GQzY/WtVozBSpbEpYDHhZbKAmC0rrUmG2UhIjCSsrUlqFBx8NOIyOZyOWYKHlXKoNERJRB6gOOAky//NAxAoVaR59shYGDL6ltVd4U65YF2JjLszqYCGjVBS5MGFZZw+qsjWBgGH/kcdVXUSNLBpnsKkiwFMqPV+GpJVsjLCUNMkF2oQtwKz3Rlh5ZT30VS2Oq20bKBF1Aul4WqX3RFDeTcX/80LEDxIpkkAIG8YM40bjMar6lV9TCidsqtJqTalxmNVzh7f7fnxmn6qqxqsPpBgIj30S13IqKuEW4j6eV55O+ojnpHV8ioBVZvMAqD4lW2loUEBKkmh3w19ae3t/2fzqnnup4/+tXkf/80DEIgtIOgxUCkYE5bWzwqNd86S/2Q7VTEFNRVVVVUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQsRPAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/zQMSkAAADSAAAAABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV</script>
+<script type="text/plain" id="snd-plop">data:audio/mpeg;base64,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</script>
+<script type="text/plain" id="snd-slide">data:audio/mpeg;base64,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</script>
+<script type="text/plain" id="snd-snow">data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//NwwAAAAAAAAAAAAEluZm8AAAAPAAAACQAABGIAQUFBQUFBQUFBQUFZWVlZWVlZWVlZWXBwcHBwcHBwcHBwiIiIiIiIiIiIiIigoKCgoKCgoKCgoLi4uLi4uLi4uLi40NDQ0NDQ0NDQ0NDo6Ojo6Ojo6Ojo6P//////////////AAAAAExhdmM2MC4zMQAAAAAAAAAAAAAAACQCfwAAAAAAAARiNx2nQAAAAAAAAAAAAAAAAAD/80DEABIA4r3jQjAAkRAIfkJqRuhJwAAJ6nIIY9k09MAYDJ7BAgg5AhGNEZZBBwPnxGD/ggc5QEFggcLh8uf8QO/1ny5/+UBAMVgh8oCDvlAwuJwf984gFanTECUMDViVzMuMNo1E5f/zQsQTGVEe/MmDMAATlJGTgLZGD3w1Nkm0+WLPhippsxz4fCe+40iSCwHWJzgbaZCIJBV4UYoIYMtScUKOKqQGkH1NAS3BMTPeA47LsSSHAyqoKgIopqiKb//Z/xUGVdWm51qVWGY2rP/zQMQJFWlC+jXGGADA8HSY5ZYMEkFZSvbabD9JJeMrRjffVnBad80CRg5G0LO8mdywZMBx6rEuLhMQj0HyNrzeEnHWWb0xyEqOO2IFLqBNXe2xDRk4jFWpUsSSUWihRIWNgLhIo18N//NCxA4XeN7mKlmMASEWonjpoycblaVJ2JUoorfKB392EkmlE0o/UR88xrF7FA0SmzK8f8KN4rbdyd36ra/nNufvkaiL4Xu9Cvd2qUyB7zX/XXv57v5+Pmv+33cx6TJWWBeUtDqIwksk//NAxAwWIN7iMjGGdDUKS3WSVXwxnw5FqMk14G8+Ogo9THpQig6l1Btag6UQBkECQVQBwmtA8ACZbgKVME4kDcSqLuUksySDJZ7kbwlFntC/MXvorRV6Ll61vQJtEunMJERiTEpfybX/80LEDhJJStYqMMUMukmaVsB1oSbt4lVHzq3zCopffmW68830j2WaZB+GuUVKkciQfBkqijPMLuyLbDzoSeWWM2Lr//6fVrWqutskkkjkkkByTMNkkkWRBhze9NJJobiUEkv6LRhyOAH/80DEIBQYkvZeCYwKEbsSxYcAlgsIlHZY8moedsCkahYrEWSrGNALiwdoWJXMFfyMKlebkqvtlnnaZ31StRtXXY3JZK2waixJISSJOsZwFdY2GFLC+gMZtmahRoKjwVIkRMWDrgENO//zQsQqFBimrl4BhggqGywFGqBUYJTp6HVlXxEBQ4wSuA1YKgqMfU8RCUqwTf6j3/xF8sogAQojA88JM0KsIBQlCTD3MnlUj+asFCx44wqkH4FCRqKx7AESrAQlPPArFt3+pmFYsjoIhP/zQMQ1EeD6LWIIRlyX1McLGmbfijyxIKgUi3FjQVFaTEFNRTMuMTAwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq</script>
+<script type="text/plain" id="snd-splash">data:audio/mpeg;base64,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</script>
+<script type="text/plain" id="snd-stamp">data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//NwwAAAAAAAAAAAAEluZm8AAAAPAAAACgAABMsAOzs7Ozs7Ozs7UVFRUVFRUVFRUWdnZ2dnZ2dnZ2d9fX19fX19fX19kpKSkpKSkpKSkqioqKioqKioqKi+vr6+vr6+vr6+1NTU1NTU1NTU1Orq6urq6urq6ur/////////////AAAAAExhdmM2MC4zMQAAAAAAAAAAAAAAACQDBgAAAAAAAATLtvbywAAAAAAAAAAAAAAAAAD/80DEAAx4Hs0fSRAABTcTibsbCPSAEAQDBIcKAgCDigYxOGMEPg+D8McEHEOXB//rD/Wf/P//+D/+D7///D4K0BxIFJHkSCOG21hVuPWpdL5yvfuUcG4Lg6E5Jr0QW7hyw4bbkXUA3v/zQsQpHGGC0AGZQAB3GniALmEDbnU7FjIq0PLFnSUcbzozxfMxNRjYooZjGsGiJg9Z4OR7BMyLjnoCtYhEyVKmnh1hS8cAnqh0Wdr6kAYOfyo05/jaJgYQlvREvqIGF2mJWsJmz2LZd//zQMQTFrmuxZPYGACTf1rdan1W7a7niZoRwFZDokjamUyi7TsoJ6FLCgB8JDkb7e5UKWal9TONwi9KFB8qBj2d3veSthRQcCcilFStVWmjWY4pI9chAV1Ypn9P02Oy9/dARIJ1JGoL//NCxBMYSbqtbMGGOEDaNx3o7SNOclpohsICtg6imkzUZUBCfC+xmGPbjMxptsREcI2Zynn8/n2GfuJqscoc963NYbnUNQZUorfLAs9bRZRozdFveSWUDSh7hyofX3b37f/74duJsI0s//NAxA0XEU7GXnmGMCudEqbONBCWKckfLLqAzISyKoUiW1BB+qBRLMrGc+GRwsKV/+Cu5M44kDMEp9jMSPOnnKPFXKBoKJuJYjGuRyokVdpU1iGsFqStWSW7yOWqOUU9q5khFGEoAFb/80LECxQRLoWUewYIHYHuxlkahVUk4HJwEacjNFWCXEhxMZgzUvNqtI81i5/quxzDQaDt50OgswliYiEhQc8nU0jZFYNQ7Voq6/10Hmsrr/T76hqvKF9W0zFAC0FlJRpFi0SP/Us4yyr/80DEFhLZ3lg0wYYMrBVDKTZBmsVfhkqhRmMtSU/42xtV1KN/f5/D2aan2qscqWvG9RJFym559AiaDIK90RfO3fLVILEMjIjehf8C5Mxhh1jqzl1VI1VeGFA0FbWOW5Q4KqPRLy2eeP/zQsQlD/CCJAzAxDQ0FXFnntFqdHUe5Ej2d9WWep/tZ/5Eq6gkzlkMgAmRoFvOhRqwBggsWQWjU1JxR8blScaWCYJmRkVIuorFRY1igkNAUKi3F+K8WFxG76hcRhkzoWKihL9Yo3Ff///zQMRBEXBxsCR5jCBQuz+LsUxBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV//NCxFYAAANIAAAAAFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV</script>
+<script type="text/plain" id="snd-tap">data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//NwwAAAAAAAAAAAAEluZm8AAAAPAAAABAAAAlgAenp6enp6enp6enp6enp6enp6enp6enp6pqampqampqampqampqampqampqampqamptPT09PT09PT09PT09PT09PT09PT09PT09P/////////////////////////////////AAAAAExhdmM2MC4zMQAAAAAAAAAAAAAAACQDTgAAAAAAAAJYX1noxAAAAAAAAAAAAAAAAAD/80DEABN4vsn/QXgCkthCUl34GMYx3jGPBIExjGMYxvHjx4rFY8ay3iaC4FwUET3vd48BAEAQMy7/gMH3/6wfB8EAQd/EAIAgn/Lg+D4P/8TggCAIf+XD/B8+gFAkEAAPkGEAgAAIEP/zQsQNF5HSvjeRoALneLiHV4ekALqsUiHyjkflEPRBA7UUwFkNMP1AyC0AYaG2mQCiYl2h0xOvEHB7IhMLiPutf8yLxtUZI//6KkUVIooq///dFTmINHv/+DIaxKRqvpgASIUe6t6m5v/zQMQKE4DCFZPH2AD5vUIQldFUrsA0CMLDDCwAqgZhwCYm8HNbJ+HmfJonbSptBqAAQxkaBw8lqzZrL8u9W79eR+p/iIkud/9v9BH/U/Pf6g8T///5goErlaojpJ0JKEmBcgPwOIMc//NCxBcQAbWMChPE6GAQcyELUCvYIF9Pqir///////9nKYKCBA4HosKp2/xUUbiwr/FW6hcVTEFNRTMuMTAwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq</script>
+<script type="text/plain" id="snd-undo">data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//NwwAAAAAAAAAAAAEluZm8AAAAPAAAACQAABGIAQUFBQUFBQUFBQUFZWVlZWVlZWVlZWXBwcHBwcHBwcHBwiIiIiIiIiIiIiIigoKCgoKCgoKCgoLi4uLi4uLi4uLi40NDQ0NDQ0NDQ0NDo6Ojo6Ojo6Ojo6P//////////////AAAAAExhdmM2MC4zMQAAAAAAAAAAAAAAACQCfwAAAAAAAARifmSXNAAAAAAAAAAAAAAAAAD/80DEABNpvlgBQSgA//43G/85z5GkJnExc6HOc4mHw+5A+Hxc5zncQAMPuIBwlX+p3nP/OfkJ+hCMcOBwhcP5R0Rg+oEIIQfgmH+H+Xf/Rg+/E4Pl7C72wQDCCZmVCFmDlghS9NqqOv/zQsQNF2E28x+GMAAQgGP/p6edpsT+gTTMveF2mhPszECR2tD3rTtF4v/NZ9XcrK8az/+737evrLEJ881DRA4eLuW9KpC/CzkEXhAkH3Ey72H5z/qc5NVaYb//2Kq2ttxlCh/mQQbEs//zQMQLFIki8kvGGAAtsYu+nos9MQzERL0wBu9I4NA6i8ZPdz6blnKnvZUw6Q85AkGnh9RdCQ3Y8CD1GM494IS7MNivFGkIEFTVpBOr0d2J3UD099WYZkVqsFF5tPXR41IyKSBh9qBk//NCxBMYubr60kmGtFV3rltOEZLUm3nPviDlXzadIDJkU91MadRQySE57uZKXohf2B2JNappTSn8XI0MEw8IpPrigHtBHByhcD2ANx9K2KMnCWfzas5z4gPMMYYU2XM0rTMIR3Q6m1gb//NAxAwWcS8C8HpGPDCiFtqV9uK62BRzH3KQXmqY0hoSFIe0paUxY5MwSigrlbDM1f52piyAhOnWrEiKUNFWsYVKEGNGFNSR5Qkq5aYKLbApz2IxLRf2qF8UpoZlMrIlKqNhgbELGAz/80LEDRNg4wryGMZwSoa4lDUYRHdgQQCDMMKLjsqEbtiQTZD7tDUEpqzQTtMGSiVG3NCiqBBA5ZyVqFUglFL5B5e/kt6sfmFPb//R1oqoVlSpFIN5rJST1mdJ4Io7aEqBEzGgsVEggeT/80DEGxQAWwbzRhgAUCOoRAUNC4CYE3PQNhR5F2HGhpiix6Se9pQGzwiAN+lowtKJdc1ejp0uU6JWnoGlV/WOhirYXYrOa3BwKAgFBAAMJYz+wMpjpIkXqQUuC5u88SZOpDqGwdh44P/zQsQmHWqa7l2GWAAdaa0fZNUkbNh3FStSbDYpSNnJN0XL7DZrLb827//bNSyWpWeduf23/5jdMN7uF4OJbZZbrZXEfXX/+64/OvbpQ2e0W8KiFkJ2sV/gyWR/VQWmMD+ISi4QhmGQnP/zQMQME3oibPHBGADZmb/+MzdVWOquwEBEwpqAiSZVL+1f9j1Vv///jdCgJqpfqp1V9mbZj19l9mOgICwlDRYGiwdz3BVYa/BWd/8seERMQU1FMy4xMDCqqqqqqqqqqqqqqqqqqqqq</script>
+<script type="text/plain" id="snd-wind">data:audio/mpeg;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjYwLjE2LjEwMAAAAAAAAAAAAAAA//NwwAAAAAAAAAAAAEluZm8AAAAPAAAAFgAACbEAHR0dHSgoKCgoMzMzMz09PT09SEhISFNTU1NTXl5eXmlpaWlpc3Nzc35+fn5+iYmJiZSUlJSUnp6enp6pqamptLS0tLS/v7+/ysrKysrU1NTU39/f39/q6urq9fX19fX/////AAAAAExhdmM2MC4zMQAAAAAAAAAAAAAAACQELwAAAAAAAAmxoh+GmwAAAAAAAAAAAAAAAAD/80DEABCQdlwNSRAAkJi6NGjkQBQMEm/+EIZ6gogQQ9zAAAMFwfBxwnB8+D6nLBzwQifyCwQdlHF/Ln1g/wQ/8QBgoc//8oc/lDhcP8uH1dNR78v6MmqyrIcSkZ9wmdWou/BuJEB0Mv/zQsQYGcIysAGPQABrwg0OCQbh+B8IlhQzsgVgv4p3g4RLIcTtP/9L3pzRliJi7///zvfdfZ8K2n/X///1Vvz8VO45yAXYsIf9LAHWfKiULEEpBMBv/8ulX/MLGSICAfFwdD4+BouBDP/zQMQNFwFawAHJGACRY2MFDeTnazlYImBuCFmbuAAFCUSOX0WYcEbgAspnCZoT6uaICtpX5XHgxN61irFGLR6BcHz5g8t0VjynYdviCQk3lBAIFUI6LHl9xSfoAG5l3qsjkAaaLJqU//NCxAwXgWrdlDJGrDIEYTRNsJrCTYNoXo5tSIItKLsNtqUZvFWv5t8bxVCBQR1KB/mn6L5cI3Q6IC4PKtHCjhgqqMSlwfDgPC4Q01R7VNfll6kWbkP723FmhBrUOYgHCkJihStY3Sj7//NAxAoV2T7UonmGrCow9tJZ5M0vWbRbADNcJFG0Tsak7rtNOw1xId6/HhSEiKtQan+SMrE7dGJAFoqhYldGIlFPbG4kchyxdzz6baT5VzyaCD1Mfglu4v/9agiKzUhoOHxQwYD50VH/80LEDRYo0uTUSYZQRpoRGqxHmnH4XpeRbFjiyrGIhytSSimBDxQCLSK3DGFTAmcHBEASCA6HVAsMreiB2JLhxA5bExoWc17Rc/FVvqofpC42pgw9xOl3VRiKTwhBMmDocWQCBYB6ICP/80DEEBKg2uTSSYRYCeh0Lq03vYMUsjbTlL3SUSu6kLhsw54QKDjXY8i17nwCGAGdLACMmUdimkKWpn7ZGNsRq5P2dqNjFtUCRf+TCCQ0muIyxKUygL1cAxYiI7AYQSRwjjap/P6N9P/zQsQgFHjW6WpLzEDl0sLjXvIg4KhF5gihJ4UJgQyi1jEirhszFFVpQ9y6lsdnxoavAdEsq1abS/Y9b9CL1gwthGH03XBwJfF08asWHNPIB0iM2WPLcMoO3FgwGbqwdH49sotTh5NSnP/zQMQqE/DW5AphhoguOINHGBxoo4MoNPSZtelQqmRvqNKKAMwG3GosvTbqRr/evRbbqgqJG20B5ZNQLBreQHUItJprFkt00mEL3C2vJl46PVfmOajW7qSjQYKjAXBkecA4JCgGAaQx//NCxDUUSOLkqEiMgK11KCdxEslF51ZriFTLWF7tDX02p710djbtl/ZVBX56/sciGQ2kdNOLkpzmNRRlxTBdgy2irQYCqzuKOKsDpQoZDLwM8GyAOrFpKdeIz2fFKWHTZ0k84cdHigkG//NAxD8T0LL49DDGpKQMMcfezfoUq9bff+zs2JpVxUvqq4IBIEwMmnjwo1M8nuoGbJ8qww/bfTq1jd4ROmCothRHQEEsUZBpQVhlpx5m8kBhxK1csiLKvU9zFYqxlwv2fI1WChkx5I7/80LEShRY6vT0SYY0xK+WpfbfuUoIlZWpR4sTnihaJpQw9iabUcl2hFxC7JoNtMyopKWIRKKcsWYiYQhVqHtAIjagJmS4STrbF7AaMmDSe5a4Co3C4YJX7tFHZt79v+juJuDIDiEbbTL/80DEVBMAvvD0SYwAXU22i+BjQErHywJJqIG6JCEFkAC9QHOyi4lIPquUg90YGDIZHh8SNU8MiiTAlmVGp4ywwMGnStJGsgt8NmhopW2wK7Hq/+k6m1gOEUhNELkiobHALOiJOJ4TF//zQsRjE8D+5CpJhnCpQXp9TpbVp4eqGhqu0t2hmZ5KZEdYZ4beSSFFCtAoKOXtkbmKrY9blkhoYzjf16q1LjB0A33tsYgrZQkguHMOzEjDsYIFiA4iWeNKmV7Q9g2UN1lTWnhoUK0e1//zQMRwE6j+6MxJhnCB8jkQtDyN+Eh2ECzZT2IhLQKQCIoC7z0p0PVQRz026Ewk8/AKQ7bjtmhe+xPV0rHaVUBEtCgj2HS4f1pFJqsPCmHjk+FuXLm8EpKTqXiAg0Ws83Drx+jlGVFo//NCxHwUkT7cKmJGONpGZpnhINozJHMGS331Sfrwvwp+6xfXqs/izid/m59jPFju2t+9y8djv/7p9u+sfzbsvP9dzrr/v+KBAGAtVVBUH4AcdSavPTsimB46aYnqB4UafSgkwk6Naw1H//NAxIUYqMrUymJMbTiOTNRwZ2hbArG8ZzEvCDyIRA6jseSNnXXKN1cZLhaqQAIx72ngxLhIhGucCzC7oq4/YVH251hRvfSizHXPNlGpwkiiAnyhr01mtJoh4X2OhqdrBmN5omundR//80LEfRjBctm0YYZwGFcaUSkvMw2GVQijVFsRaCqyHLNv19o/a8s5cTTFgxvtB0zcHGYQKcdNbHf/R+kL191N2Qzo2n/w6uzvT2vM+Z/NXG6/VH+dof9p2qd/qggYhn11wRx1wXmSOaL/80DEdhohLsCjTzABshZrSNJhMBO1OTIiO2r6VM+lyRPNGkAkeBKIY0MAJSSSUjo3HCcTEDSzxoPVk04ULtKaNjCFWrqKF6CSyBsk5sWe3Uo1uiazweNZiF0bN2InYc5u6z003lRGXf/zQsRoJNqWtZWYWABx3LG1FW93cX/XF38urdbON1fSi+6PlZQxQuAhQvDsUYBWmAw0UO/6hyv9dSIMBEihYWcOQFQFQFQah0LHaqqqzMzMzbUSJEkknnZIkZzttEiQCJVv7HJVZsscAv/zQMQwGBD+bFvIMAAGjwTBYGgaeCodTEobKnawaBp+IgaPf8FZUFXf5Z5YGgaBryoKgrBqDR6G+JQaPQVVG5layo5CQwUMDBBwjvLLMmJEThIEWIJjBoUCigMQLIE08CoqKigsLC36//NCxCoSSL0gIhjMbMVZ/////+gFhYWFjbhYWFhUVFZgKioqK+oWFhYk5QsqTEFNRTMuMTAwqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq</script>
+<script>
+// すべり石 — ブラウザ版の画面・操作・描画
+(async function () {
+  'use strict';
+  const S = window.Suberi;
+  const $ = (id) => document.getElementById(id);
+
+  // ---- 章・本 ----
+  const CHAPTERS = [
+    null,
+    { name: 'すべり石', desc: '石は岩か壁に当たるまで止まらない。朱の石を的に入れる' },
+    { name: '子石', desc: '墨の子石も動かせる。当てて止まる場所をつくる' },
+    { name: '雪だまり', desc: '雪だまりに入った石は、そこでぴたりと止まる' },
+    { name: '薄氷', desc: '薄氷は石が通ると割れて穴になる。子石を落とすと穴は埋まる' },
+    { name: '風の道', desc: '風の床に入った石は、矢の向きへ曲がって滑りつづける' },
+    { name: '門と踏み板', desc: '石が踏み板の上で止まるたびに、門が開いたり閉じたりする' },
+    { name: '詰め手', desc: '長い手順の面。子石の置き場所から考える' },
+    { name: 'ないまぜ', desc: 'これまでの仕掛けがまざって出てくる' },
+  ];
+  const BOOKS = [{ name: 'はじめの池', ch: [1, 2, 3, 4] }, { name: '奥の池', ch: [5, 6, 7, 8] }];
+  const KANJI = ['', '一', '二', '三', '四', '五', '六', '七', '八', '九', '十'];
+  const UNLOCK_PER_CHAPTER = 30; // 章 c は 印 30×(c-1) で開く
+  const MAX_HINTS = 3;
+
+  // ---- 面データ ----
+  async function loadText(id, url) {
+    const el = $(id);
+    if (el && el.textContent.trim()) return el.textContent;
+    return (await fetch(url)).text();
+  }
+  const LEVELS = S.parseLevels(await loadText('levels', 'levels.txt'));
+  const byId = new Map(LEVELS.map((l, i) => [l.id, i]));
+
+  // ---- 記録 ----
+  const SAVE_KEY = 'suberi-save-v1';
+  let save = { stars: {}, best: {}, last: null, sound: 1, buzz: 1, fast: 0 };
+  try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) { /* 保存不可でも遊べる */ }
+  const store = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* noop */ } };
+  const totalStars = () => Object.values(save.stars).reduce((a, b) => a + b, 0);
+  const chapterStars = (c) => LEVELS.filter((l) => l.ch === c).reduce((a, l) => a + (save.stars[l.id] || 0), 0);
+  const needFor = (c) => UNLOCK_PER_CHAPTER * (c - 1);
+  const isOpen = (c) => totalStars() >= needFor(c);
+
+  // ---- 音 ----
+  const SND = ['tap', 'slide', 'knock', 'snow', 'wind', 'crack', 'plop', 'splash', 'gate', 'goal', 'stamp', 'undo'];
+  let actx = null; const buffers = {};
+  // data: URI は fetch を使わずに復号する（埋め込み版・CSP対策）
+  function b64buf(u) { const bin = atob(u.slice(u.indexOf(',') + 1)); const a = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i); return a.buffer; }
+  function audioInit() {
+    if (actx) return;
+    try {
+      actx = new (window.AudioContext || window.webkitAudioContext)();
+      for (const n of SND) {
+        const inl = document.getElementById('snd-' + n);
+        const src = inl ? inl.textContent.trim() : 'sounds/' + n + '.wav';
+        (src.startsWith('data:') ? Promise.resolve(b64buf(src)) : fetch(src).then((r) => r.arrayBuffer())).then((b) => actx.decodeAudioData(b)).then((buf) => { buffers[n] = buf; }).catch(() => {});
+      }
+    } catch (e) { actx = null; }
+  }
+  function play(n, vol = 1) {
+    if (!save.sound || !actx || !buffers[n]) return;
+    if (actx.state === 'suspended') actx.resume();
+    const s = actx.createBufferSource(); s.buffer = buffers[n];
+    const g = actx.createGain(); g.gain.value = vol; s.connect(g).connect(actx.destination); s.start();
+  }
+  const buzz = (ms) => { if (save.buzz && navigator.vibrate) try { navigator.vibrate(ms); } catch (e) { /* noop */ } };
+  document.addEventListener('pointerdown', audioInit, { once: false, capture: true });
+  document.addEventListener('keydown', audioInit, { capture: true });
+
+  // ---- 画面切り替え ----
+  let screen = 'title';
+  function show(id) {
+    for (const el of document.querySelectorAll('.screen')) el.classList.toggle('on', el.id === id);
+    screen = id;
+    if (id === 'title') renderTitle();
+    if (id === 'select') renderSelect();
+    if (id === 'conf') renderConf();
+    if (id === 'game') requestAnimationFrame(resize);
+  }
+  const on = (id, fn) => $(id).addEventListener('click', () => { play('tap', 0.6); fn(); });
+  let toastT = 0;
+  function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('on'), 1800); }
+
+  // ---- タイトル ----
+  function renderTitle() {
+    const t = totalStars();
+    $('tStars').textContent = t ? `集めた印 ${t} / ${LEVELS.length * 3}` : '';
+    $('tContinue').textContent = save.last ? `つづきから（${save.last}）` : 'はじめる';
+  }
+  on('tContinue', () => openLevel(save.last && byId.has(save.last) ? byId.get(save.last) : firstUnsolved()));
+  on('tSelect', () => show('select'));
+  on('tHow', () => show('how'));
+  on('tConf', () => show('conf'));
+  function firstUnsolved() {
+    const i = LEVELS.findIndex((l) => !save.stars[l.id] && isOpen(l.ch));
+    return i < 0 ? 0 : i;
+  }
+
+  // ---- 面をえらぶ ----
+  let book = 0;
+  function renderSelect() {
+    $('sStars').textContent = `印 ${totalStars()}`;
+    const tabs = $('tabs'); tabs.innerHTML = '';
+    BOOKS.forEach((b, i) => {
+      const bt = document.createElement('button'); bt.textContent = b.name; bt.className = i === book ? 'on' : '';
+      bt.onclick = () => { play('tap', 0.6); book = i; renderSelect(); }; tabs.appendChild(bt);
+    });
+    const box = $('chapters'); box.innerHTML = '';
+    for (const c of BOOKS[book].ch) {
+      const open = isOpen(c);
+      const d = document.createElement('div'); d.className = 'chap' + (open ? '' : ' lock');
+      const lvls = LEVELS.filter((l) => l.ch === c);
+      d.innerHTML = `<h3>${KANJI[c]}の章　${CHAPTERS[c].name}<small>この章の印 ${chapterStars(c)} / ${lvls.length * 3}</small></h3>
+        <p>${open ? CHAPTERS[c].desc : `印が ${needFor(c)} 集まると開きます(いま ${totalStars()})`}</p>`;
+      const g = document.createElement('div'); g.className = 'grid';
+      for (const l of lvls) {
+        const b = document.createElement('button'); const st = save.stars[l.id] || 0;
+        b.innerHTML = `${l.no}<span class="st">${'●'.repeat(st)}</span>`;
+        b.disabled = !open; b.setAttribute('aria-label', `${l.id} 印${st}`);
+        b.onclick = () => { play('tap', 0.6); openLevel(byId.get(l.id)); };
+        g.appendChild(b);
+      }
+      d.appendChild(g); box.appendChild(d);
+    }
+  }
+  on('sBack', () => show('title'));
+
+  // ---- 設定 ----
+  let resetArmed = false;
+  function renderConf() {
+    for (const o of document.querySelectorAll('.opts')) {
+      for (const b of o.querySelectorAll('button')) b.classList.toggle('on', String(save[o.dataset.key]) === b.dataset.v);
+    }
+    resetArmed = false; $('fReset').textContent = '記録を消す';
+  }
+  for (const o of document.querySelectorAll('.opts')) {
+    o.addEventListener('click', (e) => {
+      const b = e.target.closest('button'); if (!b) return;
+      save[o.dataset.key] = +b.dataset.v; store(); renderConf(); play('tap', 0.6);
+      if (o.dataset.key === 'buzz' && save.buzz) buzz(30);
+    });
+  }
+  on('fReset', () => {
+    if (!resetArmed) { resetArmed = true; $('fReset').textContent = 'もう一度押すと消えます'; return; }
+    save.stars = {}; save.best = {}; save.last = null; store(); renderConf(); toast('消しました');
+  });
+  on('fBack', () => show('title'));
+  on('hBack', () => show('title'));
+
+  // ---- ゲーム本体 ----
+  let L = null, li = 0, state = null, history = [], moves = 0, sel = 0;
+  let anim = null, hint = null, hintsUsed = 0, hintToken = 0, busy = false;
+  const hintsByLevel = {};
+
+  function openLevel(i) {
+    li = i; L = LEVELS[i];
+    if (!isOpen(L.ch)) { toast('次の章はあと印 ' + (needFor(L.ch) - totalStars())); show('select'); return; }
+    save.last = L.id; store();
+    hintsUsed = hintsByLevel[L.id] || 0;
+    $('gId').textContent = L.id; $('gName').textContent = `${KANJI[L.ch]}の章　${CHAPTERS[L.ch].name}`;
+    $('gPar').textContent = L.par + ' 手';
+    $('clear').classList.remove('on');
+    resetLevel(true);
+    show('game');
+    setMsg(L.no === 1 ? CHAPTERS[L.ch].desc : '');
+  }
+  function resetLevel(silent) {
+    state = S.initState(L); history = []; moves = 0; sel = 0; anim = null; hint = null; hintToken++; busy = false;
+    if (!silent) { play('undo', 0.7); setMsg(''); }
+    updateHud(); draw();
+  }
+  function setMsg(t, warn) { const m = $('msg'); m.textContent = t || ''; m.classList.toggle('warn', !!warn); }
+  function updateHud() {
+    $('gMoves').textContent = moves;
+    $('gUndo').disabled = !history.length;
+    $('gHintLeft').textContent = `のこり ${MAX_HINTS - hintsUsed}`;
+  }
+  on('gList', () => { hintToken++; show('select'); });
+  on('gUndo', undo);
+  on('gReset', () => { if (!anim) resetLevel(false); });
+  on('gHint', doHint);
+  on('cNext', () => {
+    $('clear').classList.remove('on');
+    const n = li + 1;
+    if (n >= LEVELS.length) { show('select'); return; }
+    if (!isOpen(LEVELS[n].ch)) { toast('次の章はあと印 ' + (needFor(LEVELS[n].ch) - totalStars())); show('select'); return; }
+    openLevel(n);
+  });
+  on('cAgain', () => { $('clear').classList.remove('on'); resetLevel(true); });
+  on('cList', () => { $('clear').classList.remove('on'); show('select'); });
+
+  function undo() {
+    if (anim || !history.length) return;
+    state = history.pop(); moves--; hint = null; hintToken++;
+    play('undo', 0.7); setMsg(''); updateHud(); draw();
+  }
+
+  function tryMove(idx, dir) {
+    if (anim || state.won || busy) return;
+    const r = S.move(state, idx, dir);
+    if (r.result === 'none') { play('knock', 0.35); buzz(8); return; }
+    const followed = hint && hint.idx === idx && hint.dir === dir;
+    hint = null; hintToken++;
+    sel = idx;
+    play('slide', 0.7);
+    const speed = save.fast ? 34 : 17; // 升/秒
+    anim = { idx, r, prev: state, t0: performance.now(), dur: Math.max(120, (r.path.length - 1) / speed * 1000), fired: 0, followed };
+    requestAnimationFrame(tick);
+  }
+
+  function fireEvents(upto) {
+    const p = anim.r.path;
+    for (let i = anim.fired + 1; i <= upto && i < p.length; i++) {
+      const ev = p[i].ev;
+      if (anim.prev.grid[p[i - 1].y][p[i - 1].x] === '~') play('crack', 0.6);
+      if (ev === 'wind') play('wind', 0.6);
+      anim.fired = i;
+    }
+  }
+
+  function tick(now) {
+    if (!anim) return;
+    const k = Math.max(0, Math.min(1, (now - anim.t0) / anim.dur));
+    anim.k = k;
+    const n = anim.r.path.length - 1;
+    fireEvents(Math.floor(k * n));
+    draw();
+    if (k < 1) { requestAnimationFrame(tick); return; }
+    if (!anim.fallT) finishMove(now);
+    else if (now - anim.fallT < 420) { requestAnimationFrame(tick); }
+    else { // 朱の石が落ちた：一手もどす
+      anim = null; draw(); play('undo', 0.6);
+      setMsg('朱の石が穴に落ちました。一手もどします', true);
+    }
+  }
+
+  function finishMove(now) {
+    const r = anim.r; const last = r.path[r.path.length - 1];
+    if (r.result === 'fall') { play('splash'); buzz([30, 40, 30]); anim.fallT = now; requestAnimationFrame(tick); return; }
+    if (last.ev === 'plop') { play('plop'); buzz(20); }
+    else if (last.ev === 'snow') play('snow', 0.8);
+    else if (r.result !== 'goal') { play('knock', 0.8); buzz(12); }
+    if (last.ev === 'gate') setTimeout(() => play('gate', 0.8), 60);
+    history.push(anim.prev); state = r.state; moves++;
+    const followed = anim.followed;
+    anim = null; updateHud(); draw();
+    if (r.result === 'goal') { onGoal(); return; }
+    setMsg(followed ? 'ヒント通りです' : '');
+  }
+
+  function onGoal() {
+    play('goal'); buzz([20, 60, 40]);
+    let st = moves <= L.par ? 3 : moves <= L.par + 2 ? 2 : 1;
+    if (hintsUsed > 0) st = Math.min(st, 2);
+    const prevOpen = BOOKS.flatMap((b) => b.ch).filter(isOpen).length;
+    save.stars[L.id] = Math.max(save.stars[L.id] || 0, st);
+    save.best[L.id] = Math.min(save.best[L.id] || 999, moves);
+    store();
+    const nowOpen = BOOKS.flatMap((b) => b.ch).filter(isOpen).length;
+    setTimeout(() => {
+      $('cSeal').innerHTML = [1, 2, 3].map((i) => `<span class="${i <= st ? '' : 'off'}">印</span>`).join('');
+      let t = `${moves} 手 / 最短 ${L.par} 手`;
+      if (moves <= L.par) t += hintsUsed ? '　最短です(ヒントあり)' : '　最短の手順です';
+      else t += `　あと ${moves - L.par} 手縮められます`;
+      if (nowOpen > prevOpen) t += '\n次の章が開きました';
+      $('cText').textContent = t; $('cText').style.whiteSpace = 'pre-line';
+      $('clear').classList.add('on'); play('stamp', 0.8);
+      $('cNext').focus({ preventScroll: true });
+    }, 450);
+  }
+
+  // ---- ヒント ----
+  // まず収録の最短手順に乗っているかを調べ、外れていればワーカーで探索する
+  let worker = null, workerFail = false;
+  async function getWorker() {
+    if (worker || workerFail) return worker;
+    try {
+      const src = await loadText('engine', 'engine.js');
+      const code = src + '\nself.onmessage=(e)=>{const S=self.Suberi||globalThis.Suberi;const r=S.solve(e.data.state,e.data.limit,e.data.lv);self.postMessage({id:e.data.id,sol:r});};';
+      worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })));
+    } catch (e) { workerFail = true; worker = null; }
+    return worker;
+  }
+  function solveAsync(st) {
+    return new Promise(async (res) => {
+      const w = await getWorker();
+      if (!w) { setTimeout(() => res(S.solve(st, 300000, L)), 30); return; }
+      const id = Math.random();
+      const h = (e) => { if (e.data.id === id) { w.removeEventListener('message', h); w.removeEventListener('error', fail); res(e.data.sol); } };
+      // ワーカーが使えない環境（CSP等）では画面側で探索する
+      const fail = () => { w.removeEventListener('message', h); workerFail = true; worker = null; setTimeout(() => res(S.solve(st, 300000, L)), 30); };
+      w.addEventListener('message', h); w.addEventListener('error', fail);
+      w.postMessage({ id, state: st, limit: 600000, lv: L });
+    });
+  }
+  async function doHint() {
+    if (anim || state.won || busy) return;
+    if (hint) { setMsg(`ヒント：あと最短 ${hint.left} 手`); return; }
+    if (hintsUsed >= MAX_HINTS) { setMsg('この面のヒントは使い切りました', true); return; }
+    const token = ++hintToken;
+    busy = true; $('gHint').disabled = true;
+    const slow = setTimeout(() => setMsg('考え中…'), 150);
+    const sol = await solveAsync(state);
+    clearTimeout(slow); busy = false; $('gHint').disabled = false;
+    if (token !== hintToken || screen !== 'game') return;
+    if (sol === 'limit') { setMsg('手順を見つけきれませんでした。少しもどしてから、もう一度どうぞ', true); return; }
+    if (!sol || !sol.length) { setMsg('この形からは解けません。もどすか、やりなおしてください', true); return; }
+    hintsUsed++; hintsByLevel[L.id] = hintsUsed;
+    hint = { idx: sol[0][0], dir: sol[0][1], left: sol.length, t0: performance.now() };
+    sel = hint.idx;
+    setMsg(`ヒント：あと最短 ${sol.length} 手`);
+    updateHud(); requestAnimationFrame(hintLoop);
+  }
+  function hintLoop() { if (hint && screen === 'game' && !anim) { draw(); requestAnimationFrame(hintLoop); } }
+
+  // ---- 描画 ----
+  const cv = $('board'); const ctx = cv.getContext('2d');
+  let geo = { cs: 40, ox: 0, oy: 0, dpr: 1 };
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  let C = {};
+  function readColors() {
+    C = {
+      paper: css('--paper'), paper2: css('--paper2'), ink: css('--ink'), ink2: css('--ink2'), ink3: css('--ink3'),
+      shu: css('--shu'), shu2: css('--shu2'), rock: css('--rock'), rock2: css('--rock2'), ice: css('--ice'), ice2: css('--ice2'), line: css('--line'),
+    };
+  }
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); draw(); });
+  readColors();
+
+  function resize() {
+    const r = $('stage').getBoundingClientRect();
+    const dpr = Math.min(3, window.devicePixelRatio || 1);
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.height * dpr);
+    if (L) {
+      const cs = Math.floor(Math.min(r.width / (L.w + 0.3), r.height / (L.h + 0.3)));
+      geo = { cs, ox: (r.width - cs * L.w) / 2, oy: (r.height - cs * L.h) / 2, dpr };
+    }
+    draw();
+  }
+  window.addEventListener('resize', resize);
+
+  function rr(x, y, w, h, r) { ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x, y, w, h, r) : ctx.rect(x, y, w, h); }
+
+  function drawCell(c, x, y, s, gateOpen) {
+    const cs = geo.cs; const px = geo.ox + x * cs, py = geo.oy + y * cs; const m = cs / 2;
+    // 氷
+    ctx.fillStyle = C.ice; ctx.fillRect(px, py, cs, cs);
+    ctx.strokeStyle = C.ice2; ctx.lineWidth = 1; ctx.strokeRect(px + 0.5, py + 0.5, cs - 1, cs - 1);
+    if (c === '#') {
+      ctx.fillStyle = C.rock;
+      rr(px + cs * 0.06, py + cs * 0.08, cs * 0.88, cs * 0.84, cs * 0.22); ctx.fill();
+      ctx.fillStyle = C.rock2; rr(px + cs * 0.12, py + cs * 0.12, cs * 0.7, cs * 0.6, cs * 0.18); ctx.fill();
+      ctx.strokeStyle = C.rock; ctx.lineWidth = Math.max(1, cs * 0.03);
+      ctx.beginPath(); ctx.moveTo(px + cs * 0.3, py + cs * 0.35); ctx.lineTo(px + cs * 0.48, py + cs * 0.3); ctx.stroke();
+    } else if (c === '~') { // 薄氷
+      ctx.fillStyle = C.paper; ctx.globalAlpha = 0.55; ctx.fillRect(px + 2, py + 2, cs - 4, cs - 4); ctx.globalAlpha = 1;
+      ctx.strokeStyle = C.ice2; ctx.lineWidth = Math.max(1, cs * 0.03);
+      ctx.beginPath();
+      ctx.moveTo(px + cs * 0.2, py + cs * 0.3); ctx.lineTo(px + cs * 0.45, py + cs * 0.45); ctx.lineTo(px + cs * 0.8, py + cs * 0.35);
+      ctx.moveTo(px + cs * 0.45, py + cs * 0.45); ctx.lineTo(px + cs * 0.5, py + cs * 0.8);
+      ctx.stroke();
+    } else if (c === 'o') { // 穴
+      ctx.fillStyle = C.ink; ctx.globalAlpha = 0.85;
+      ctx.beginPath(); ctx.ellipse(px + m, py + m, cs * 0.4, cs * 0.36, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.globalAlpha = 0.35; ctx.strokeStyle = C.ice; ctx.lineWidth = Math.max(1, cs * 0.03);
+      ctx.beginPath(); ctx.ellipse(px + m, py + m, cs * 0.22, cs * 0.15, 0, 0, Math.PI * 2); ctx.stroke(); ctx.globalAlpha = 1;
+    } else if (c === '*') { // 雪だまり
+      ctx.fillStyle = '#fbfbf8';
+      ctx.beginPath();
+      ctx.arc(px + cs * 0.35, py + cs * 0.58, cs * 0.24, 0, Math.PI * 2);
+      ctx.arc(px + cs * 0.62, py + cs * 0.52, cs * 0.27, 0, Math.PI * 2);
+      ctx.arc(px + cs * 0.5, py + cs * 0.68, cs * 0.24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = C.ice2; ctx.lineWidth = 1; ctx.stroke();
+    } else if ('<>^v'.includes(c)) { // 風の床
+      const ang = { '>': 0, 'v': Math.PI / 2, '<': Math.PI, '^': -Math.PI / 2 }[c];
+      ctx.save(); ctx.translate(px + m, py + m); ctx.rotate(ang);
+      ctx.strokeStyle = C.ink3; ctx.lineWidth = Math.max(1.5, cs * 0.06); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      for (const ofs of [-0.16, 0.12]) {
+        ctx.beginPath(); ctx.moveTo(cs * (ofs - 0.08), -cs * 0.2); ctx.lineTo(cs * (ofs + 0.12), 0); ctx.lineTo(cs * (ofs - 0.08), cs * 0.2); ctx.stroke();
+      }
+      ctx.restore();
+    } else if (c === '_') { // 踏み板
+      ctx.fillStyle = C.paper2; ctx.strokeStyle = C.ink2; ctx.lineWidth = Math.max(1, cs * 0.04);
+      rr(px + cs * 0.16, py + cs * 0.16, cs * 0.68, cs * 0.68, cs * 0.08); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(px + cs * 0.3, py + m); ctx.lineTo(px + cs * 0.7, py + m); ctx.stroke();
+    } else if (c === '|') { // 門
+      ctx.strokeStyle = C.ink; ctx.lineWidth = Math.max(2, cs * 0.08); ctx.lineCap = 'round';
+      if (!gateOpen) {
+        ctx.fillStyle = C.ink2; ctx.globalAlpha = 0.25; ctx.fillRect(px + 2, py + 2, cs - 4, cs - 4); ctx.globalAlpha = 1;
+        ctx.beginPath();
+        ctx.moveTo(px + cs * 0.15, py + cs * 0.25); ctx.lineTo(px + cs * 0.85, py + cs * 0.25);
+        for (const xx of [0.3, 0.5, 0.7]) { ctx.moveTo(px + cs * xx, py + cs * 0.2); ctx.lineTo(px + cs * xx, py + cs * 0.85); }
+        ctx.stroke();
+      } else {
+        ctx.globalAlpha = 0.45; ctx.setLineDash([cs * 0.08, cs * 0.08]); ctx.lineWidth = Math.max(1, cs * 0.04);
+        ctx.strokeRect(px + cs * 0.15, py + cs * 0.15, cs * 0.7, cs * 0.7); ctx.setLineDash([]); ctx.globalAlpha = 1;
+        ctx.lineWidth = Math.max(2, cs * 0.08);
+        ctx.beginPath(); ctx.moveTo(px + cs * 0.15, py + cs * 0.25); ctx.lineTo(px + cs * 0.85, py + cs * 0.25); ctx.stroke();
+      }
+    }
+  }
+
+  function drawStone(i, fx, fy, scale = 1, alpha = 1) {
+    const cs = geo.cs; const cx = geo.ox + (fx + 0.5) * cs, cy = geo.oy + (fy + 0.5) * cs; const r = cs * 0.38 * scale;
+    ctx.globalAlpha = alpha * 0.18; ctx.fillStyle = '#000';
+    ctx.beginPath(); ctx.ellipse(cx, cy + r * 0.25, r * 1.02, r * 0.95, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = i === 0 ? C.shu : C.ink;
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.28)';
+    ctx.beginPath(); ctx.ellipse(cx - r * 0.3, cy - r * 0.35, r * 0.32, r * 0.2, -0.5, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
+  }
+
+  function draw() {
+    if (!L || !state || screen !== 'game') return;
+    const { dpr, cs, ox, oy } = geo;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    const base = anim ? anim.prev : state;
+    // 動作中に割れた薄氷
+    const cracked = new Set();
+    let pos = null;
+    if (anim) {
+      const p = anim.r.path; const n = p.length - 1; const f = (anim.k || 0) * n; const i = Math.min(n - 1, Math.floor(f)); const t = f - i;
+      for (let j = 0; j <= Math.min(n, Math.floor(f + 1e-6)) - 1; j++) if (base.grid[p[j].y][p[j].x] === '~') cracked.add(p[j].x + ',' + p[j].y);
+      pos = n === 0 ? p[0] : { x: p[i].x + (p[i + 1].x - p[i].x) * t, y: p[i].y + (p[i + 1].y - p[i].y) * t };
+      if (anim.k >= 1) pos = p[n];
+    }
+    // 盤の縁
+    ctx.fillStyle = C.line; rr(ox - 6, oy - 6, cs * L.w + 12, cs * L.h + 12, 10); ctx.fill();
+    for (let y = 0; y < L.h; y++) for (let x = 0; x < L.w; x++) {
+      let c = base.grid[y][x];
+      if (cracked.has(x + ',' + y)) c = 'o';
+      drawCell(c, x, y, base, base.gateOpen);
+    }
+    // 的
+    if (base.goal) {
+      const g = base.goal; ctx.strokeStyle = C.shu; ctx.lineWidth = Math.max(2, cs * 0.07);
+      ctx.strokeRect(ox + g.x * cs + cs * 0.12, oy + g.y * cs + cs * 0.12, cs * 0.76, cs * 0.76);
+      ctx.globalAlpha = 0.1; ctx.fillStyle = C.shu; ctx.fillRect(ox + g.x * cs + cs * 0.12, oy + g.y * cs + cs * 0.12, cs * 0.76, cs * 0.76); ctx.globalAlpha = 1;
+    }
+    // 石
+    base.stones.forEach((t, i) => {
+      if (anim && i === anim.idx) return;
+      if (!t.alive) return;
+      drawStone(i, t.x, t.y);
+    });
+    if (anim) {
+      const last = anim.r.path[anim.r.path.length - 1];
+      const falling = anim.k >= 1 && (anim.r.result === 'fall' || last.ev === 'plop');
+      if (falling && anim.r.result === 'fall') {
+        const ft = anim.fallT ? Math.min(1, (performance.now() - anim.fallT) / 400) : 0;
+        drawStone(anim.idx, pos.x, pos.y, 1 - ft * 0.7, 1 - ft);
+      } else if (!falling) drawStone(anim.idx, pos.x, pos.y);
+    }
+    // 選択の輪（キーボード操作用）
+    const st = state.stones[sel];
+    if (!anim && st && st.alive && (kbMode || hint)) {
+      ctx.strokeStyle = C.shu2; ctx.lineWidth = 2; ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.arc(ox + (st.x + 0.5) * cs, oy + (st.y + 0.5) * cs, cs * 0.47, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    }
+    // ヒントの矢
+    if (hint && !anim) {
+      const t = state.stones[hint.idx]; const [dx, dy] = S.DIRS[hint.dir];
+      const ph = ((performance.now() - hint.t0) / 900) % 1;
+      const cx = ox + (t.x + 0.5) * cs, cy = oy + (t.y + 0.5) * cs;
+      const d0 = cs * (0.55 + ph * 0.25), len = cs * 0.45;
+      ctx.save(); ctx.translate(cx + dx * d0, cy + dy * d0); ctx.rotate(Math.atan2(dy, dx));
+      ctx.globalAlpha = 1 - ph * 0.6; ctx.fillStyle = C.shu;
+      ctx.beginPath(); ctx.moveTo(len, 0); ctx.lineTo(0, -len * 0.5); ctx.lineTo(len * 0.15, 0); ctx.lineTo(0, len * 0.5); ctx.closePath(); ctx.fill();
+      ctx.restore(); ctx.globalAlpha = 1;
+    }
+  }
+
+  // ---- 入力 ----
+  let kbMode = false; let drag = null;
+  function cellAt(e) {
+    const r = cv.getBoundingClientRect();
+    return { fx: (e.clientX - r.left - geo.ox) / geo.cs - 0.5, fy: (e.clientY - r.top - geo.oy) / geo.cs - 0.5 };
+  }
+  function nearestStone(fx, fy, maxD) {
+    let best = -1, bd = maxD;
+    state.stones.forEach((t, i) => { if (!t.alive) return; const d = Math.hypot(t.x - fx, t.y - fy); if (d < bd) { bd = d; best = i; } });
+    return best;
+  }
+  cv.addEventListener('pointerdown', (e) => {
+    if (anim || state.won) return;
+    kbMode = false;
+    const { fx, fy } = cellAt(e);
+    const i = nearestStone(fx, fy, 0.75);
+    drag = { i, x: e.clientX, y: e.clientY, done: false };
+    cv.setPointerCapture(e.pointerId);
+    if (i >= 0) { sel = i; draw(); }
+  });
+  cv.addEventListener('pointermove', (e) => {
+    if (!drag || drag.done || drag.i < 0) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (Math.hypot(dx, dy) < Math.max(14, geo.cs * 0.3)) return;
+    drag.done = true;
+    tryMove(drag.i, Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'R' : 'L') : (dy > 0 ? 'D' : 'U'));
+  });
+  const endDrag = () => { drag = null; };
+  cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
+
+  document.addEventListener('keydown', (e) => {
+    if (screen !== 'game') { if (e.key === 'Escape' && screen !== 'title') show('title'); return; }
+    if ($('clear').classList.contains('on')) { if (e.key === 'Escape') show('select'); return; }
+    const k = e.key;
+    const dir = { ArrowUp: 'U', ArrowDown: 'D', ArrowLeft: 'L', ArrowRight: 'R', w: 'U', s: 'D', a: 'L', d: 'R' }[k];
+    if (dir) { e.preventDefault(); kbMode = true; tryMove(sel, dir); return; }
+    if (k === 'Tab') {
+      e.preventDefault(); kbMode = true; const n = state.stones.length;
+      for (let j = 1; j <= n; j++) { const c = (sel + (e.shiftKey ? -j : j) + n * 2) % n; if (state.stones[c].alive) { sel = c; break; } }
+      draw(); return;
+    }
+    if (/^[0-9]$/.test(k)) { const c = +k; if (state.stones[c] && state.stones[c].alive) { kbMode = true; sel = c; draw(); } return; }
+    if (k === 'z' || k === 'Z' || k === 'Backspace') { e.preventDefault(); undo(); return; }
+    if (k === 'r' || k === 'R') { if (!anim) resetLevel(false); return; }
+    if (k === 'h' || k === 'H') { doHint(); return; }
+    if (k === 'Escape') show('select');
+  });
+
+  // ---- 開始 ----
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => draw());
+  show('title');
+})();
+</script>
+</body>
+</html>
