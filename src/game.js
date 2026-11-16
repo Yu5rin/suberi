@@ -32,7 +32,7 @@
 
   // ---- 記録 ----
   const SAVE_KEY = 'suberi-save-v1';
-  let save = { stars: {}, best: {}, last: null, sound: 1, buzz: 1, fast: 0 };
+  let save = { stars: {}, best: {}, last: null, sound: 1, buzz: 1, fast: 0, hintTotal: 0 }; // hintTotal: ヒントを見た累計回数
   try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY) || '{}')); } catch (e) { /* 保存不可でも遊べる */ }
   const store = () => { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) { /* noop */ } };
   const totalStars = () => Object.values(save.stars).reduce((a, b) => a + b, 0);
@@ -83,7 +83,10 @@
   // ---- タイトル ----
   function renderTitle() {
     const t = totalStars();
-    $('tStars').textContent = t ? `集めた印 ${t} / ${LEVELS.length * 3}` : '';
+    const lines = [];
+    if (t) lines.push(`集めた印 ${t} / ${LEVELS.length * 3}`);
+    if (save.hintTotal) lines.push(`ヒントを見た回数 累計 ${save.hintTotal}`);
+    $('tStars').textContent = lines.join('　');
     $('tContinue').textContent = save.last ? `つづきから（${save.last}）` : 'はじめる';
   }
   on('tContinue', () => openLevel(save.last && byId.has(save.last) ? byId.get(save.last) : firstUnsolved()));
@@ -141,7 +144,7 @@
   }
   on('fReset', () => {
     if (!resetArmed) { resetArmed = true; $('fReset').textContent = 'もう一度押すと消えます'; return; }
-    save.stars = {}; save.best = {}; save.last = null; store(); renderConf(); toast('消しました');
+    save.stars = {}; save.best = {}; save.last = null; save.hintTotal = 0; store(); renderConf(); toast('消しました');
   });
   on('fBack', () => show('title'));
   on('hBack', () => show('title'));
@@ -172,7 +175,7 @@
   function updateHud() {
     $('gMoves').textContent = moves;
     $('gUndo').disabled = !history.length;
-    $('gHintLeft').textContent = `のこり ${MAX_HINTS - hintsUsed}`;
+    $('gHintLeft').textContent = `のこり ${MAX_HINTS - hintsUsed}・累計 ${save.hintTotal || 0}`;
   }
   on('gList', () => { hintToken++; show('select'); });
   on('gUndo', undo);
@@ -305,6 +308,7 @@
     if (sol === 'limit') { setMsg('手順を見つけきれませんでした。少しもどしてから、もう一度どうぞ', true); return; }
     if (!sol || !sol.length) { setMsg('この形からは解けません。もどすか、やりなおしてください', true); return; }
     hintsUsed++; hintsByLevel[L.id] = hintsUsed;
+    save.hintTotal = (save.hintTotal || 0) + 1; store(); // 累計はブラウザを閉じても残る
     hint = { idx: sol[0][0], dir: sol[0][1], left: sol.length, t0: performance.now() };
     sel = hint.idx;
     setMsg(`ヒント：あと最短 ${sol.length} 手`);
